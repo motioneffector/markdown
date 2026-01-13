@@ -1018,13 +1018,7 @@ function parseEmphasis(
     let searchFrom = contentStart
 
     while (searchFrom < text.length) {
-      let closeIndex = -1
-      for (let j = searchFrom; j < text.length; j++) {
-        if (text[j] === char) {
-          closeIndex = j
-          break
-        }
-      }
+      const closeIndex = text.indexOf(char, searchFrom)
       if (closeIndex === -1) break
 
       let closeCount = 0
