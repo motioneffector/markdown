@@ -1066,49 +1066,58 @@ function collectEmphasisDelimiters(
  * Match closing delimiters with opening delimiters.
  * This is Phase 2 of the CommonMark delimiter stack algorithm.
  * Modifies the delimiters array in place by updating 'matched' counts.
+ * Loops multiple times to handle nested emphasis (e.g., ***text***).
  */
 function matchEmphasisDelimiters(delimiters: EmphasisDelimiter[]): void {
-  // Process potential closers from right to left
-  for (let closerIdx = delimiters.length - 1; closerIdx >= 0; closerIdx--) {
-    const closer = delimiters[closerIdx]
+  // Loop until no more matches are found (handles nested emphasis)
+  let foundMatch = true
 
-    // Skip if can't close or already fully matched
-    if (!closer.canClose || closer.matched >= closer.count) {
-      continue
-    }
+  while (foundMatch) {
+    foundMatch = false
 
-    // Find matching opener (scanning backwards)
-    for (let openerIdx = closerIdx - 1; openerIdx >= 0; openerIdx--) {
-      const opener = delimiters[openerIdx]
+    // Process potential closers from right to left
+    for (let closerIdx = delimiters.length - 1; closerIdx >= 0; closerIdx--) {
+      const closer = delimiters[closerIdx]
 
-      // Skip if can't open, already fully matched, or different type
-      if (!opener.canOpen || opener.matched >= opener.count) {
-        continue
-      }
-      if (opener.type !== closer.type) {
+      // Skip if can't close or already fully matched
+      if (!closer.canClose || closer.matched >= closer.count) {
         continue
       }
 
-      // Determine how many delimiters to match
-      // Prefer pairs (** for strong, * for em)
-      const openerAvailable = opener.count - opener.matched
-      const closerAvailable = closer.count - closer.matched
+      // Find matching opener (scanning backwards)
+      for (let openerIdx = closerIdx - 1; openerIdx >= 0; openerIdx--) {
+        const opener = delimiters[openerIdx]
 
-      // Try to match 2 at a time (for **strong**), then 1 (for *em*)
-      let matchCount = Math.min(openerAvailable, closerAvailable)
-      if (matchCount >= 2) {
-        matchCount = 2
-      } else {
-        matchCount = 1
-      }
+        // Skip if can't open, already fully matched, or different type
+        if (!opener.canOpen || opener.matched >= opener.count) {
+          continue
+        }
+        if (opener.type !== closer.type) {
+          continue
+        }
 
-      // Update matched counts
-      opener.matched += matchCount
-      closer.matched += matchCount
+        // Determine how many delimiters to match
+        // Prefer pairs (** for strong, * for em)
+        const openerAvailable = opener.count - opener.matched
+        const closerAvailable = closer.count - closer.matched
 
-      // If closer is fully matched, stop searching for openers
-      if (closer.matched >= closer.count) {
-        break
+        // Try to match 2 at a time (for **strong**), then 1 (for *em*)
+        let matchCount = Math.min(openerAvailable, closerAvailable)
+        if (matchCount >= 2) {
+          matchCount = 2
+        } else {
+          matchCount = 1
+        }
+
+        // Update matched counts
+        opener.matched += matchCount
+        closer.matched += matchCount
+        foundMatch = true
+
+        // If closer is fully matched, stop searching for openers
+        if (closer.matched >= closer.count) {
+          break
+        }
       }
     }
   }
@@ -1147,16 +1156,22 @@ function buildEmphasisHtml(
   const closer = delimiters[closerIdx]
 
   // Extract content between opener and closer
+  // If the closer has more matched delimiters than the opener,
+  // include the extra delimiters in the content (for nested emphasis)
   const contentStart = firstOpener.position + firstOpener.matched
-  const contentEnd = closer.position
+  const extraMatched = closer.matched - firstOpener.matched
+  const contentEnd = closer.position + Math.max(0, extraMatched)
   const content = text.slice(contentStart, contentEnd)
 
   // Recursively process the content
   const processedContent = processInlineSinglePass(content, opts, definitions)
 
-  // Build HTML based on match count (1 = em, 2 = strong)
+  // Build HTML based on match count (1 = em, 2 = strong, 3+ = strong+em nested)
   let html: string
-  if (firstOpener.matched === 2) {
+  if (firstOpener.matched >= 3) {
+    // Triple or more: nested strong+em
+    html = `<strong><em>${processedContent}</em></strong>`
+  } else if (firstOpener.matched === 2) {
     html = `<strong>${processedContent}</strong>`
   } else if (firstOpener.matched === 1) {
     html = `<em>${processedContent}</em>`
@@ -1174,8 +1189,7 @@ function buildEmphasisHtml(
 /**
  * Parse emphasis: *, **, ***, _, __, ___
  * Uses "find rightmost valid closer" approach for proper nesting.
- * NOTE: This function will be fully refactored in Optimization 9 (non-recursive emphasis)
- * String slicing optimizations intentionally deferred until that refactor.
+ * NOTE: CommonMark delimiter stack helpers above for future optimization
  */
 function parseEmphasis(
   text: string,
