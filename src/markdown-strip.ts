@@ -25,6 +25,8 @@ const DANGEROUS_TAGS = ['script', 'style', 'iframe', 'object', 'embed']
  * // Custom configuration
  * const safe = markdownStrip(html, { allow: ['p', 'strong', 'em'] })
  * ```
+ *
+ * @throws {Error} If both 'allow' and 'strip' options are provided
  */
 export function markdownStrip(
   input: string,
