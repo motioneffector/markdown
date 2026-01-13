@@ -137,7 +137,20 @@ function parseBlocks(input: string, opts: Required<MarkdownOptions>, depth: numb
     return [{ type: 'paragraph', text: input }]
   }
 
-  const lines = input.split('\n')
+  // Optimized: Build lines array using indexOf instead of split (reduces allocations)
+  const lines: string[] = []
+  let pos = 0
+  while (pos < input.length) {
+    const nextNewline = input.indexOf('\n', pos)
+    if (nextNewline === -1) {
+      lines.push(input.slice(pos))
+      break
+    } else {
+      lines.push(input.slice(pos, nextNewline))
+      pos = nextNewline + 1
+    }
+  }
+
   const blocks: Block[] = []
   let i = 0
 
