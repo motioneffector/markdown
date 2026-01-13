@@ -46,9 +46,7 @@ describe('CommonMark Spec Compliance', () => {
   })
 })
 
-describe.skip('Performance', () => {
-  // SKIPPED: Performance optimization needed - tests hang on large documents
-  // TODO: Optimize parser for large documents before enabling these tests
+describe('Performance', () => {
   describe('Speed', () => {
     it('parses 100KB in under 10ms', () => {
       const largeDoc = '# Heading\n\n'.repeat(5000) // ~100KB
@@ -87,7 +85,7 @@ describe.skip('Performance', () => {
     })
 
     it('handles 1MB documents', () => {
-      const largeDoc = '# Heading\n\nParagraph\n\n'.repeat(5000) // ~200KB (reduced from 1MB)
+      const largeDoc = '# Heading\n\nParagraph\n\n'.repeat(5000) // ~200KB
       const result = markdown(largeDoc)
       expect(result).toContain('<h1>')
     })
@@ -95,8 +93,7 @@ describe.skip('Performance', () => {
 })
 
 describe('Edge Cases', () => {
-  describe.skip('Deep Nesting', () => {
-    // SKIPPED: Parser has performance issues with deep nesting
+  describe('Deep Nesting', () => {
     it('handles 10+ levels of block quotes', () => {
       let input = ''
       for (let i = 0; i < 15; i++) {
@@ -174,8 +171,7 @@ describe('Edge Cases', () => {
     })
   })
 
-  describe.skip('Large Documents', () => {
-    // SKIPPED: Performance optimization needed before testing large documents
+  describe('Large Documents', () => {
     it('handles 1MB markdown input', () => {
       const largeInput = '# Heading\n\nParagraph with some text.\n\n'.repeat(5000) // ~200KB (reduced for performance)
       const result = markdown(largeInput)

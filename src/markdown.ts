@@ -1,6 +1,9 @@
 import type { MarkdownOptions } from './types'
 import { escapeHtml, sanitizeUrl, isBlankLine } from './utils'
 
+// Maximum nesting depth to prevent stack overflow and OOM
+const MAX_DEPTH = 32
+
 /**
  * Convert markdown text to HTML
  *
@@ -41,11 +44,31 @@ export function markdown(input: string, options?: MarkdownOptions): string {
   // Extract link definitions first (two-pass approach for reference links)
   const { text: cleanedInput, definitions } = extractLinkDefinitions(input)
 
-  // Parse blocks
-  const blocks = parseBlocks(cleanedInput, opts)
+  // Parse blocks with depth tracking
+  const blocks = parseBlocks(cleanedInput, opts, 0)
+
+  // Render blocks to HTML with depth tracking
+  return blocks.map(block => renderBlock(block, opts, definitions, 0)).join('\n')
+}
+
+/**
+ * Internal markdown function that tracks recursion depth for blockquotes
+ */
+function markdownInternal(
+  input: string,
+  opts: Required<MarkdownOptions>,
+  definitions: LinkDefinitions,
+  depth: number
+): string {
+  if (input === '' || depth >= MAX_DEPTH) {
+    return depth >= MAX_DEPTH ? `<p>${escapeHtml(input)}</p>` : ''
+  }
+
+  // Parse blocks with current depth
+  const blocks = parseBlocks(input, opts, depth)
 
   // Render blocks to HTML
-  return blocks.map(block => renderBlock(block, opts, definitions)).join('\n')
+  return blocks.map(block => renderBlock(block, opts, definitions, depth)).join('\n')
 }
 
 /**
@@ -91,7 +114,12 @@ interface Block {
   [key: string]: unknown
 }
 
-function parseBlocks(input: string, opts: Required<MarkdownOptions>): Block[] {
+function parseBlocks(input: string, opts: Required<MarkdownOptions>, depth: number = 0): Block[] {
+  // Prevent excessive nesting - stop parsing if too deep
+  if (depth >= MAX_DEPTH) {
+    return [{ type: 'paragraph', text: input }]
+  }
+
   const lines = input.split('\n')
   const blocks: Block[] = []
   let i = 0
@@ -131,8 +159,10 @@ function parseBlocks(input: string, opts: Required<MarkdownOptions>): Block[] {
           break
         }
         const firstHeadingLine = headingLines[0]
+        // Check if first line is a thematic break pattern (---, ***, ___)
+        const isThematicBreak = firstHeadingLine && /^(?:(?:-\s*){3,}|(?:\*\s*){3,}|(?:_\s*){3,})$/.test(firstHeadingLine)
         if (/^-+\s*$/.test(currentLine) && headingLines.length > 0 &&
-            firstHeadingLine && !/^[*\-+]\s/.test(firstHeadingLine) && !/^\d+\.\s/.test(firstHeadingLine)) {
+            firstHeadingLine && !/^[*\-+]\s/.test(firstHeadingLine) && !/^\d+\.\s/.test(firstHeadingLine) && !isThematicBreak) {
           blocks.push({
             type: 'heading',
             level: 2,
@@ -220,7 +250,7 @@ function parseBlocks(input: string, opts: Required<MarkdownOptions>): Block[] {
 
     // Unordered list
     if (/^[*\-+]\s/.test(line)) {
-      const { block: listBlock, consumed } = parseList(lines, i, opts, 'ul')
+      const { block: listBlock, consumed } = parseList(lines, i, opts, 'ul', depth + 1)
       blocks.push(listBlock)
       i += consumed
       continue
@@ -228,7 +258,7 @@ function parseBlocks(input: string, opts: Required<MarkdownOptions>): Block[] {
 
     // Ordered list
     if (/^\d+\.\s/.test(line)) {
-      const { block: listBlock, consumed } = parseList(lines, i, opts, 'ol')
+      const { block: listBlock, consumed } = parseList(lines, i, opts, 'ol', depth + 1)
       blocks.push(listBlock)
       i += consumed
       continue
@@ -329,6 +359,18 @@ function parseBlocks(input: string, opts: Required<MarkdownOptions>): Block[] {
         type: 'paragraph',
         text: paraLines.join('\n'),
       })
+    } else {
+      // Safety: if no block type matched and paraLines is empty,
+      // consume the current line as a paragraph to prevent infinite loops
+      // (can happen with malformed input like tables without proper separators)
+      const currentLine = getLine(lines, i)
+      if (currentLine && !isBlankLine(currentLine)) {
+        blocks.push({
+          type: 'paragraph',
+          text: currentLine,
+        })
+      }
+      i++
     }
   }
 
@@ -360,7 +402,8 @@ function parseList(
   lines: string[],
   startIndex: number,
   opts: Required<MarkdownOptions>,
-  listType: 'ul' | 'ol'
+  listType: 'ul' | 'ol',
+  depth: number = 0
 ): { block: Block; consumed: number } {
   const items: ListItem[] = []
   let i = startIndex
@@ -448,8 +491,8 @@ function parseList(
       // Parse nested content (could contain nested lists) - but avoid infinite recursion
       const nestedContent = itemLines.join('\n')
       let nestedBlocks: Block[] = []
-      if (nestedContent.trim() && nestedContent !== line) {
-        nestedBlocks = parseBlocks(nestedContent, opts)
+      if (nestedContent.trim() && nestedContent !== line && depth < MAX_DEPTH) {
+        nestedBlocks = parseBlocks(nestedContent, opts, depth + 1)
       }
 
       items.push({
@@ -480,7 +523,7 @@ function parseList(
   }
 }
 
-function renderBlock(block: Block, opts: Required<MarkdownOptions>, definitions: LinkDefinitions = new Map()): string {
+function renderBlock(block: Block, opts: Required<MarkdownOptions>, definitions: LinkDefinitions = new Map(), depth: number = 0): string {
   switch (block.type) {
     case 'heading': {
       const level = block.level
@@ -580,7 +623,11 @@ function renderBlock(block: Block, opts: Required<MarkdownOptions>, definitions:
     case 'blockquote': {
       const content = block.content
       if (typeof content !== 'string') return ''
-      return `<blockquote>\n${markdown(content, opts)}\n</blockquote>`
+      // Prevent excessive recursion - if at max depth, escape content
+      if (depth >= MAX_DEPTH) {
+        return `<blockquote>\n<p>${escapeHtml(content)}</p>\n</blockquote>`
+      }
+      return `<blockquote>\n${markdownInternal(content, opts, definitions, depth + 1)}\n</blockquote>`
     }
 
     case 'table': {
@@ -735,18 +782,24 @@ function processInline(text: string, opts: Required<MarkdownOptions>, definition
   }
 
   // Step 7: Bold and Italic (process *** first, then **, then *)
-  // ***text*** -> <strong><em>text</em></strong>
-  result = result.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>')
-  result = result.replace(/___([^_]+)___/g, '<strong><em>$1</em></strong>')
+  // Guard against pathological input (excessive delimiters)
+  const asteriskCount = (result.match(/\*/g) ?? []).length
+  const underscoreCount = (result.match(/_/g) ?? []).length
 
-  // **text** or __text__ -> <strong>text</strong>
-  // Use lookahead/lookbehind for proper nested emphasis
-  result = result.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-  result = result.replace(/__(.+?)__/g, '<strong>$1</strong>')
+  // Only process emphasis if delimiter counts are reasonable
+  if (asteriskCount < 1000 && underscoreCount < 1000) {
+    // ***text*** -> <strong><em>text</em></strong>
+    result = result.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>')
+    result = result.replace(/___([^_]+)___/g, '<strong><em>$1</em></strong>')
 
-  // *text* or _text_ -> <em>text</em>
-  result = result.replace(/\*(.+?)\*/g, '<em>$1</em>')
-  result = result.replace(/_(.+?)_/g, '<em>$1</em>')
+    // **text** or __text__ -> <strong>text</strong>
+    result = result.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    result = result.replace(/__(.+?)__/g, '<strong>$1</strong>')
+
+    // *text* or _text_ -> <em>text</em>
+    result = result.replace(/\*(.+?)\*/g, '<em>$1</em>')
+    result = result.replace(/_(.+?)_/g, '<em>$1</em>')
+  }
 
   // Step 8: GFM Strikethrough: ~~text~~
   if (opts.gfm) {
