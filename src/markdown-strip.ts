@@ -56,7 +56,7 @@ export function markdownStrip(
       throw new Error('Cannot use both "allow" and "strip" options')
     }
 
-    unwrap = config.unwrap !== undefined ? config.unwrap : true
+    unwrap = config.unwrap ?? true
 
     if (config.allow) {
       allowedTags = config.allow
@@ -71,10 +71,20 @@ export function markdownStrip(
         'table', 'thead', 'tbody', 'tr', 'th', 'td',
         'blockquote',
       ]
-      allowedTags = allTags.filter(tag => !config.strip!.includes(tag))
+      const stripList = config.strip
+      allowedTags = allTags.filter(tag => !stripList.includes(tag))
     } else {
-      // No allow or strip = allow everything
-      return html
+      // No allow or strip specified, but still need to remove dangerous tags
+      // Use a permissive list that includes most tags
+      allowedTags = [
+        'p', 'div', 'span', 'br', 'hr',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'strong', 'em', 'b', 'i', 'u', 'del', 'code', 'pre',
+        'a', 'img',
+        'ul', 'ol', 'li',
+        'table', 'thead', 'tbody', 'tr', 'th', 'td',
+        'blockquote',
+      ]
     }
   }
 
@@ -99,7 +109,10 @@ function stripTags(html: string, allowedTags: string[], unwrap: boolean): string
   // Find all tags in the HTML
   let match
   while ((match = tagRegex.exec(html)) !== null) {
-    tags.add(match[1].toLowerCase())
+    const tagName = match[1]
+    if (tagName) {
+      tags.add(tagName.toLowerCase())
+    }
   }
 
   // Process each tag

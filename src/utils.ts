@@ -24,8 +24,8 @@ export function unescapeHtml(text: string): string {
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, code) => String.fromCharCode(parseInt(code, 16)))
+    .replace(/&#(\d+);/g, (_match: string, code: string) => String.fromCharCode(parseInt(code, 10)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_match: string, code: string) => String.fromCharCode(parseInt(code, 16)))
 }
 
 /**
@@ -96,7 +96,7 @@ export function isBlankLine(line: string): boolean {
  */
 export function countLeadingSpaces(line: string): number {
   const match = line.match(/^( *)/)
-  return match ? match[1].length : 0
+  return match?.[1]?.length ?? 0
 }
 
 /**
