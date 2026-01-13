@@ -4,6 +4,10 @@ import { escapeHtml, sanitizeUrl, isBlankLine } from './utils'
 // Maximum nesting depth to prevent stack overflow and OOM
 const MAX_DEPTH = 32
 
+// GFM autolink patterns - cached at module scope for performance
+const GFM_URL_PUNCTUATION = /[.,;:!?)\]]+$/
+const GFM_EMAIL_PATTERN = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/
+
 /**
  * Convert markdown text to HTML
  *
@@ -1116,8 +1120,7 @@ function parseGfmAutolink(text: string, start: number): InlineParseResult {
     }
 
     let url = text.slice(start, i)
-    const trailingPunct = /[.,;:!?)\]]+$/
-    const match = url.match(trailingPunct)
+    const match = url.match(GFM_URL_PUNCTUATION)
     if (match) {
       url = url.slice(0, -match[0].length)
       i -= match[0].length
@@ -1138,8 +1141,7 @@ function parseGfmAutolink(text: string, start: number): InlineParseResult {
     }
 
     let url = text.slice(start, i)
-    const trailingPunct = /[.,;:!?)\]]+$/
-    const match = url.match(trailingPunct)
+    const match = url.match(GFM_URL_PUNCTUATION)
     if (match) {
       url = url.slice(0, -match[0].length)
       i -= match[0].length
@@ -1153,7 +1155,7 @@ function parseGfmAutolink(text: string, start: number): InlineParseResult {
     }
   }
 
-  const emailMatch = text.slice(start).match(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)
+  const emailMatch = text.slice(start).match(GFM_EMAIL_PATTERN)
   if (emailMatch) {
     return {
       html: `<a href="mailto:${emailMatch[0]}">${emailMatch[0]}</a>`,
