@@ -1149,6 +1149,7 @@ function matchEmphasisDelimiters(delimiters: EmphasisDelimiter[]): void {
 /**
  * Build HTML output from matched delimiters.
  * This is Phase 3 of the CommonMark delimiter stack algorithm.
+ * Finds the OUTERMOST matched pair and recursively processes content.
  */
 function buildEmphasisHtml(
   text: string,
@@ -1160,17 +1161,30 @@ function buildEmphasisHtml(
 ): { html: string; endIndex: number } | null {
   if (delimiters.length === 0) return null
 
-  // Check if first delimiter can open and has matches
-  const firstOpener = delimiters.find(d => d.canOpen && d.matched > 0)
-  if (!firstOpener) return null
-
-  // Find the corresponding closer
-  let closerIdx = -1
+  // Find the FIRST opener with matches (leftmost)
+  let openerIdx = -1
   for (let i = 0; i < delimiters.length; i++) {
-    const d = delimiters[i]
-    if (d.position > firstOpener.position && d.canClose && d.matched > 0 && d.type === firstOpener.type) {
-      closerIdx = i
+    if (delimiters[i].canOpen && delimiters[i].matched > 0) {
+      openerIdx = i
       break
+    }
+  }
+
+  if (openerIdx === -1) return null
+
+  const opener = delimiters[openerIdx]
+
+  // Find its matching closer
+  let closerIdx = -1
+  for (let i = openerIdx + 1; i < delimiters.length; i++) {
+    const d = delimiters[i]
+    if (d.canClose && d.matched > 0 && d.type === opener.type) {
+      // Check if this closer matches our opener's match count
+      if (d.matched === opener.matched ||
+          (d.matched >= 2 && opener.matched >= 2)) {
+        closerIdx = i
+        break
+      }
     }
   }
 
@@ -1179,27 +1193,21 @@ function buildEmphasisHtml(
   const closer = delimiters[closerIdx]
 
   // Extract content between opener and closer
-  // If the closer has more matched delimiters than the opener,
-  // include the extra delimiters in the content (for nested emphasis)
-  const contentStart = firstOpener.position + firstOpener.matched
-  const extraMatched = closer.matched - firstOpener.matched
-  const contentEnd = closer.position + Math.max(0, extraMatched)
+  const contentStart = opener.position + opener.matched
+  const contentEnd = closer.position
   const content = text.slice(contentStart, contentEnd)
 
-  // Recursively process the content
+  // Recursively process the content (will find inner emphasis)
   const processedContent = processInlineSinglePass(content, opts, definitions)
 
-  // Build HTML based on match count (1 = em, 2 = strong, 3+ = strong+em nested)
+  // Build HTML based on match count
   let html: string
-  if (firstOpener.matched >= 3) {
-    // Triple or more: nested strong+em
+  const matchCount = opener.matched
+  if (matchCount >= 3) {
     html = `<strong><em>${processedContent}</em></strong>`
-  } else if (firstOpener.matched === 2) {
+  } else if (matchCount === 2) {
     html = `<strong>${processedContent}</strong>`
-  } else if (firstOpener.matched === 1) {
-    html = `<em>${processedContent}</em>`
   } else {
-    // Shouldn't happen, but fallback
     html = `<em>${processedContent}</em>`
   }
 
