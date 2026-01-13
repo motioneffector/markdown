@@ -186,6 +186,49 @@ describe('Block Elements', () => {
       expect(result).toMatch(expectedPattern)
     })
 
+    it('lazy continuation stops at blank line', () => {
+      const result = markdown('> Line 1\nLine 2\n\nOutside')
+      // Verify Line 1 and Line 2 are in blockquote
+      expect(result).toMatch(/<blockquote>[\s\S]*Line 1[\s\S]*Line 2[\s\S]*<\/blockquote>/)
+      // Verify "Outside" is separate paragraph after blockquote
+      expect(result).toMatch(/<\/blockquote>[\s\S]*<p>Outside<\/p>/)
+    })
+
+    it('lazy continuation stops at list marker', () => {
+      const result = markdown('> Line 1\n- List item')
+      expect(result).toMatch(/<blockquote>[\s\S]*<p>Line 1<\/p>[\s\S]*<\/blockquote>/)
+      expect(result).toContain('<ul>')
+    })
+
+    it('lazy continuation stops at heading', () => {
+      const result = markdown('> Line 1\n# Heading')
+      expect(result).toMatch(/<blockquote>[\s\S]*<p>Line 1<\/p>[\s\S]*<\/blockquote>/)
+      expect(result).toContain('<h1>Heading</h1>')
+    })
+
+    it('multiple lazy continuation lines', () => {
+      const result = markdown('> Line 1\nLine 2\nLine 3')
+      expect(result).toMatch(/<blockquote>[\s\S]*<p>[\s\S]*Line 1[\s\S]*Line 2[\s\S]*Line 3[\s\S]*<\/p>[\s\S]*<\/blockquote>/)
+    })
+
+    it('lazy continuation stops at code fence', () => {
+      const result = markdown('> Line 1\n```\ncode\n```')
+      expect(result).toMatch(/<blockquote>[\s\S]*<p>Line 1<\/p>[\s\S]*<\/blockquote>/)
+      expect(result).toContain('<pre><code>')
+    })
+
+    it('lazy continuation stops at thematic break', () => {
+      const result = markdown('> Line 1\n***')
+      expect(result).toMatch(/<blockquote>[\s\S]*<p>Line 1<\/p>[\s\S]*<\/blockquote>/)
+      expect(result).toContain('<hr')
+    })
+
+    it('lazy continuation stops at indented code', () => {
+      const result = markdown('> Line 1\n    code')
+      expect(result).toMatch(/<blockquote>[\s\S]*<p>Line 1<\/p>[\s\S]*<\/blockquote>/)
+      expect(result).toContain('<pre><code>')
+    })
+
     it('handles multiple paragraphs in quote', () => {
       const result = markdown('> Para 1\n>\n> Para 2')
       expect(result).toContain('<p>Para 1</p>')

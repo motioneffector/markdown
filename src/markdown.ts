@@ -269,8 +269,31 @@ function parseBlocks(input: string, opts: Required<MarkdownOptions>, depth: numb
       const quoteLines: string[] = []
       while (i < lines.length) {
         const quoteLine = getLine(lines, i)
-        if (!quoteLine.startsWith('> ') && !quoteLine.startsWith('>')) break
-        quoteLines.push(quoteLine.replace(/^>\s?/, ''))
+
+        // Explicit marker: always include and strip the marker
+        if (quoteLine.startsWith('> ') || quoteLine.startsWith('>')) {
+          quoteLines.push(quoteLine.replace(/^>\s?/, ''))
+          i++
+          continue
+        }
+
+        // Blank line: end blockquote
+        if (isBlankLine(quoteLine)) {
+          break
+        }
+
+        // Indented code block (4 spaces): no lazy continuation
+        if (/^ {4}/.test(quoteLine)) {
+          break
+        }
+
+        // Block structure marker: no lazy continuation
+        if (isBlockStart(quoteLine, opts)) {
+          break
+        }
+
+        // Otherwise: lazy continuation of paragraph
+        quoteLines.push(quoteLine)
         i++
       }
       const quoteContent = quoteLines.join('\n')
