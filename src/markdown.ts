@@ -1007,6 +1007,62 @@ function parseAutolink(text: string, start: number): InlineParseResult {
 }
 
 /**
+ * Collect all emphasis delimiter runs in a text range.
+ * This is Phase 1 of the CommonMark delimiter stack algorithm.
+ */
+function collectEmphasisDelimiters(
+  text: string,
+  start: number,
+  end: number
+): EmphasisDelimiter[] {
+  const delimiters: EmphasisDelimiter[] = []
+
+  let i = start
+  while (i < end) {
+    const char = text[i]
+
+    // Only interested in * and _
+    if (char !== '*' && char !== '_') {
+      i++
+      continue
+    }
+
+    // Count consecutive delimiters
+    let count = 0
+    const delimStart = i
+    while (i < end && text[i] === char) {
+      count++
+      i++
+    }
+
+    // Determine if this delimiter run can open/close emphasis
+    // Based on surrounding characters (CommonMark rules)
+    const before = delimStart > start ? text[delimStart - 1] : ' '
+    const after = i < end ? text[i] : ' '
+
+    const beforeIsWhitespace = /\s/.test(before)
+    const afterIsWhitespace = /\s/.test(after)
+
+    // Can open if not followed by whitespace
+    const canOpen = !afterIsWhitespace
+
+    // Can close if not preceded by whitespace
+    const canClose = !beforeIsWhitespace
+
+    delimiters.push({
+      type: char as '*' | '_',
+      count,
+      position: delimStart,
+      canOpen,
+      canClose,
+      matched: 0
+    })
+  }
+
+  return delimiters
+}
+
+/**
  * Parse emphasis: *, **, ***, _, __, ___
  * Uses "find rightmost valid closer" approach for proper nesting.
  * NOTE: This function will be fully refactored in Optimization 9 (non-recursive emphasis)
