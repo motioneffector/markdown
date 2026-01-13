@@ -1115,6 +1115,63 @@ function matchEmphasisDelimiters(delimiters: EmphasisDelimiter[]): void {
 }
 
 /**
+ * Build HTML output from matched delimiters.
+ * This is Phase 3 of the CommonMark delimiter stack algorithm.
+ */
+function buildEmphasisHtml(
+  text: string,
+  start: number,
+  end: number,
+  delimiters: EmphasisDelimiter[],
+  opts: Required<MarkdownOptions>,
+  definitions: LinkDefinitions
+): { html: string; endIndex: number } | null {
+  if (delimiters.length === 0) return null
+
+  // Check if first delimiter can open and has matches
+  const firstOpener = delimiters.find(d => d.canOpen && d.matched > 0)
+  if (!firstOpener) return null
+
+  // Find the corresponding closer
+  let closerIdx = -1
+  for (let i = 0; i < delimiters.length; i++) {
+    const d = delimiters[i]
+    if (d.position > firstOpener.position && d.canClose && d.matched > 0 && d.type === firstOpener.type) {
+      closerIdx = i
+      break
+    }
+  }
+
+  if (closerIdx === -1) return null
+
+  const closer = delimiters[closerIdx]
+
+  // Extract content between opener and closer
+  const contentStart = firstOpener.position + firstOpener.matched
+  const contentEnd = closer.position
+  const content = text.slice(contentStart, contentEnd)
+
+  // Recursively process the content
+  const processedContent = processInlineSinglePass(content, opts, definitions)
+
+  // Build HTML based on match count (1 = em, 2 = strong)
+  let html: string
+  if (firstOpener.matched === 2) {
+    html = `<strong>${processedContent}</strong>`
+  } else if (firstOpener.matched === 1) {
+    html = `<em>${processedContent}</em>`
+  } else {
+    // Shouldn't happen, but fallback
+    html = `<em>${processedContent}</em>`
+  }
+
+  // Calculate end index (after the closer)
+  const endIndex = closer.position + closer.matched
+
+  return { html, endIndex }
+}
+
+/**
  * Parse emphasis: *, **, ***, _, __, ___
  * Uses "find rightmost valid closer" approach for proper nesting.
  * NOTE: This function will be fully refactored in Optimization 9 (non-recursive emphasis)
