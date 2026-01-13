@@ -850,6 +850,7 @@ function parseCodeSpan(text: string, start: number): InlineParseResult {
 
 /**
  * Parse an image: ![alt](src "title") or ![alt][ref]
+ * Note: Slicing is necessary to extract alt text and references for HTML generation
  */
 function parseImageSinglePass(
   text: string,
@@ -898,6 +899,7 @@ function parseImageSinglePass(
 /**
  * Parse a link: [text](url) or [text][ref]
  * If URL is dangerous, outputs just the link text.
+ * Note: Slicing is necessary to extract link text and references for HTML generation
  */
 function parseLinkSinglePass(
   text: string,
