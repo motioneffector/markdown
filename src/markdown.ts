@@ -552,13 +552,13 @@ function renderBlock(block: Block, opts: Required<MarkdownOptions>, definitions:
       const level = block.level
       const text = block.text
       if (typeof level !== 'number' || typeof text !== 'string') return ''
-      return `<h${String(level)}>${processInline(text, opts, definitions)}</h${String(level)}>`
+      return `<h${String(level)}>${processInlineSinglePass(text, opts, definitions)}</h${String(level)}>`
     }
 
     case 'paragraph': {
       const text = block.text
       if (typeof text !== 'string') return ''
-      return `<p>${processInline(text.trim(), opts, definitions)}</p>`
+      return `<p>${processInlineSinglePass(text.trim(), opts, definitions)}</p>`
     }
 
     case 'code': {
@@ -589,13 +589,13 @@ function renderBlock(block: Block, opts: Required<MarkdownOptions>, definitions:
             const firstChild = item.children[0]
             if (item.children.length === 1 && firstChild?.type === 'paragraph') {
               const paragraphText = firstChild.text
-              content = typeof paragraphText === 'string' ? processInline(paragraphText, opts, definitions) : childHtml
+              content = typeof paragraphText === 'string' ? processInlineSinglePass(paragraphText, opts, definitions) : childHtml
             } else {
               content = childHtml
             }
           }
         } else {
-          content = processInline(item.content, opts, definitions)
+          content = processInlineSinglePass(item.content, opts, definitions)
         }
 
         // Add checkbox for task list items
@@ -629,13 +629,13 @@ function renderBlock(block: Block, opts: Required<MarkdownOptions>, definitions:
             const firstChild = item.children[0]
             if (item.children.length === 1 && firstChild?.type === 'paragraph') {
               const paragraphText = firstChild.text
-              content = typeof paragraphText === 'string' ? processInline(paragraphText, opts, definitions) : childHtml
+              content = typeof paragraphText === 'string' ? processInlineSinglePass(paragraphText, opts, definitions) : childHtml
             } else {
               content = childHtml
             }
           }
         } else {
-          content = processInline(item.content, opts, definitions)
+          content = processInlineSinglePass(item.content, opts, definitions)
         }
 
         return `<li>${content}</li>`
@@ -661,7 +661,7 @@ function renderBlock(block: Block, opts: Required<MarkdownOptions>, definitions:
           const align = alignments[i]
           const alignStr = typeof align === 'string' ? align : null
           const style = alignStr ? ` style="text-align: ${alignStr}"` : ''
-          return `<th${style}>${processInline(cell, opts, definitions)}</th>`
+          return `<th${style}>${processInlineSinglePass(cell, opts, definitions)}</th>`
         })
         .join('')
       const rowsData = Array.isArray(block.rows) ? (block.rows as string[][]) : []
@@ -672,7 +672,7 @@ function renderBlock(block: Block, opts: Required<MarkdownOptions>, definitions:
               const align = alignments[i]
               const alignStr = typeof align === 'string' ? align : null
               const style = alignStr ? ` style="text-align: ${alignStr}"` : ''
-              return `<td${style}>${processInline(cell, opts, definitions)}</td>`
+              return `<td${style}>${processInlineSinglePass(cell, opts, definitions)}</td>`
             })
             .join('')
           return `<tr>${cells}</tr>`
@@ -686,176 +686,626 @@ function renderBlock(block: Block, opts: Required<MarkdownOptions>, definitions:
   }
 }
 
-function processInline(text: string, opts: Required<MarkdownOptions>, definitions: LinkDefinitions = new Map()): string {
-  let result = text
+// ============================================================================
+// Single-Pass Inline Parser - Helper Types and Utilities
+// ============================================================================
 
-  // Step 1: Handle escape sequences FIRST (before any other processing)
-  // Store escaped characters temporarily
-  const escapes: string[] = []
-  result = result.replace(/\\([\\`*_{}[\]()#+\-.!|])/g, (_match: string, char: string) => {
-    escapes.push(char)
-    return `\x00ESCAPE${String(escapes.length - 1)}\x00`
-  })
+/**
+ * Result from inline element parsers
+ */
+type InlineParseResult = { html: string; endIndex: number } | null
 
-  // Step 2: Code spans (to protect their content from other processing)
-  // Handle double backticks first (can contain single backticks)
-  result = result.replace(/``(.+?)``/g, (_match: string, code: string) => {
-    // Strip single leading/trailing space if present
-    const trimmed = code.replace(/^ (.+) $/, '$1')
-    return `<code>${escapeHtml(trimmed)}</code>`
-  })
-  // Then single backticks (cannot contain backticks)
-  result = result.replace(/`([^`]+)`/g, (_match: string, code: string) => {
-    // Strip single leading/trailing space if present
-    const trimmed = code.replace(/^ (.+) $/, '$1')
-    return `<code>${escapeHtml(trimmed)}</code>`
-  })
+/**
+ * Characters that can be escaped with backslash
+ */
+function isEscapable(char: string): boolean {
+  return '\\`*_{}[]()#+-.!|~'.includes(char)
+}
 
-  // Step 3: Images: ![alt](src) or ![alt](src "title")
-  result = result.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_fullMatch: string, alt: string, srcPart: string) => {
-    const match = srcPart.match(/^<?([^>\s]+)>?(?:\s+"([^"]+)")?/)
-    if (!match?.[1]) return ''
-    const src = match[1]
-    const title = match[2]
-    const safeSrc = opts.sanitize ? sanitizeUrl(src.trim()) : src.trim()
-    if (!safeSrc) return ''
-    const titleAttr = title ? ` title="${escapeHtml(title)}"` : ''
-    return `<img src="${escapeHtml(safeSrc)}" alt="${escapeHtml(alt)}"${titleAttr} />`
-  })
-
-  // Step 3b: Reference-style images: ![alt][ref] or ![alt][]
-  result = result.replace(/!\[([^\]]*)\]\[([^\]]*)\]/g, (match: string, alt: string, ref: string) => {
-    const refKey = (ref || alt).toLowerCase()
-    const def = definitions.get(refKey)
-    if (!def) return match
-    const safeSrc = opts.sanitize ? sanitizeUrl(def.url.trim()) : def.url.trim()
-    if (!safeSrc) return match
-    const titleAttr = def.title ? ` title="${escapeHtml(def.title)}"` : ''
-    return `<img src="${escapeHtml(safeSrc)}" alt="${escapeHtml(alt)}"${titleAttr} />`
-  })
-
-  // Step 4: Links: [text](url) or [text](url "title")
-  // Handle balanced parentheses in URLs using a function-based approach
-  result = parseLinksSmart(result, opts)
-
-  // Step 4b: Reference-style links: [text][ref], [text][], or [text] (shortcut)
-  // [text][ref] - explicit reference
-  result = result.replace(/\[([^\]]+)\]\[([^\]]+)\]/g, (match: string, linkText: string, ref: string) => {
-    const refKey = ref.toLowerCase()
-    const def = definitions.get(refKey)
-    if (!def) return match
-    const safeUrl = opts.sanitize ? sanitizeUrl(def.url.trim()) : def.url.trim()
-    if (!safeUrl) return match
-    const target = opts.linkTarget ? ` target="${opts.linkTarget}"` : ''
-    const titleAttr = def.title ? ` title="${escapeHtml(def.title)}"` : ''
-    return `<a href="${escapeHtml(safeUrl)}"${target}${titleAttr}>${linkText}</a>`
-  })
-
-  // [text][] - collapsed reference (use text as ref)
-  result = result.replace(/\[([^\]]+)\]\[\]/g, (match: string, linkText: string) => {
-    const refKey = linkText.toLowerCase()
-    const def = definitions.get(refKey)
-    if (!def) return match
-    const safeUrl = opts.sanitize ? sanitizeUrl(def.url.trim()) : def.url.trim()
-    if (!safeUrl) return match
-    const target = opts.linkTarget ? ` target="${opts.linkTarget}"` : ''
-    const titleAttr = def.title ? ` title="${escapeHtml(def.title)}"` : ''
-    return `<a href="${escapeHtml(safeUrl)}"${target}${titleAttr}>${linkText}</a>`
-  })
-
-  // [text] - shortcut reference (use text as ref, only if definition exists)
-  result = result.replace(/\[([^\]]+)\](?!\[|\()/g, (match: string, linkText: string) => {
-    const refKey = linkText.toLowerCase()
-    const def = definitions.get(refKey)
-    if (!def) return match
-    const safeUrl = opts.sanitize ? sanitizeUrl(def.url.trim()) : def.url.trim()
-    if (!safeUrl) return match
-    const target = opts.linkTarget ? ` target="${opts.linkTarget}"` : ''
-    const titleAttr = def.title ? ` title="${escapeHtml(def.title)}"` : ''
-    return `<a href="${escapeHtml(safeUrl)}"${target}${titleAttr}>${linkText}</a>`
-  })
-
-  // Step 5: Autolinks: <url> and <email>
-  result = result.replace(/<(https?:\/\/[^>]+)>/g, '<a href="$1">$1</a>')
-  result = result.replace(
-    /<([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})>/g,
-    '<a href="mailto:$1">$1</a>'
-  )
-
-  // Step 6: GFM Extended autolinks (plain URLs without <>)
-  if (opts.gfm) {
-    // Match URLs but stop at punctuation
-    // Simple approach: only match URLs at word boundaries, not inside attributes
-    result = result.replace(
-      /(^|[\s(])(https?:\/\/[^\s<>"]+?)([.,;:!?)\]]*(?=\s|$))/gm,
-      (_match: string, prefix: string, url: string, trailing: string) => {
-        return `${prefix}<a href="${url}">${url}</a>${trailing}`
-      }
-    )
-    result = result.replace(/(^|[\s(])(www\.[^\s<>"]+?)([.,;:!?)\]]*(?=\s|$))/gm, (_match: string, prefix: string, url: string, trailing: string) => {
-      return `${prefix}<a href="http://${url}">${url}</a>${trailing}`
-    })
-    // Email autolinks at word boundaries
-    result = result.replace(
-      /(^|[\s(])([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})(?=[\s.,;:!?)\]]|$)/gm,
-      (_match: string, prefix: string, email: string) => {
-        return `${prefix}<a href="mailto:${email}">${email}</a>`
-      }
-    )
+/**
+ * Find the closing bracket for a bracket that starts at 'start'
+ * Handles nested brackets correctly
+ */
+function findClosingBracket(text: string, start: number): number {
+  if (text[start] !== '[') return -1
+  let depth = 1
+  for (let i = start + 1; i < text.length; i++) {
+    if (text[i] === '\\' && i + 1 < text.length) {
+      i++ // Skip escaped character
+      continue
+    }
+    if (text[i] === '[') depth++
+    else if (text[i] === ']') depth--
+    if (depth === 0) return i
   }
+  return -1
+}
 
-  // Step 7: Bold and Italic (process *** first, then **, then *)
-  // Guard against pathological input (excessive delimiters)
-  const asteriskCount = (result.match(/\*/g) ?? []).length
-  const underscoreCount = (result.match(/_/g) ?? []).length
+/**
+ * Parse URL and optional title from a parenthetical: (url "title")
+ */
+function parseUrlAndTitle(
+  text: string,
+  start: number
+): { url: string; title?: string; endIndex: number } | null {
+  if (text[start] !== '(') return null
+  let i = start + 1
 
-  // Only process emphasis if delimiter counts are reasonable
-  if (asteriskCount < 1000 && underscoreCount < 1000) {
-    // ***text*** -> <strong><em>text</em></strong>
-    result = result.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>')
-    result = result.replace(/___([^_]+)___/g, '<strong><em>$1</em></strong>')
+  // Skip leading whitespace
+  while (i < text.length && /\s/.test(text[i] ?? '')) i++
 
-    // **text** or __text__ -> <strong>text</strong>
-    result = result.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    result = result.replace(/__(.+?)__/g, '<strong>$1</strong>')
-
-    // *text* or _text_ -> <em>text</em>
-    result = result.replace(/\*(.+?)\*/g, '<em>$1</em>')
-    result = result.replace(/_(.+?)_/g, '<em>$1</em>')
-  }
-
-  // Step 8: GFM Strikethrough: ~~text~~
-  if (opts.gfm) {
-    result = result.replace(/~~([^~]+)~~/g, '<del>$1</del>')
-  }
-
-  // Step 9: Hard line breaks
-  if (opts.breaks) {
-    result = result.replace(/\n/g, '<br />\n')
+  // Handle angle bracket URLs: <url>
+  let url: string
+  if (text[i] === '<') {
+    const closeAngle = text.indexOf('>', i)
+    if (closeAngle === -1) return null
+    url = text.slice(i + 1, closeAngle)
+    i = closeAngle + 1
   } else {
-    result = result.replace(/ {2}\n/g, '<br />\n')
-    result = result.replace(/\\\n/g, '<br />\n')
+    // Regular URL (handle balanced parens)
+    const urlStart = i
+    let parenDepth = 0
+    while (i < text.length) {
+      const c = text[i]
+      if (c === '(') parenDepth++
+      else if (c === ')') {
+        if (parenDepth === 0) break
+        parenDepth--
+      } else if (/\s/.test(c ?? '') && parenDepth === 0) break
+      i++
+    }
+    url = text.slice(urlStart, i)
   }
 
-  // Step 10: Restore escaped characters
-  // eslint-disable-next-line no-control-regex -- Using null bytes as safe placeholders
-  result = result.replace(/\x00ESCAPE(\d+)\x00/g, (_match: string, index: string) => {
-    return escapes[parseInt(index, 10)] ?? ''
-  })
+  // Skip whitespace
+  while (i < text.length && /\s/.test(text[i] ?? '')) i++
 
-  // Step 11: HTML entity decoding (convert &amp; etc)
-  result = result.replace(/&#(\d+);/g, (_match: string, code: string) => String.fromCharCode(parseInt(code, 10)))
-  result = result.replace(/&#x([0-9a-fA-F]+);/g, (_match: string, code: string) =>
-    String.fromCharCode(parseInt(code, 16))
-  )
+  // Optional title in quotes
+  let title: string | undefined
+  if (text[i] === '"' || text[i] === "'") {
+    const quote = text[i]
+    const titleStart = i + 1
+    const titleEnd = text.indexOf(quote ?? '', titleStart)
+    if (titleEnd !== -1) {
+      title = text.slice(titleStart, titleEnd)
+      i = titleEnd + 1
+    }
+  }
 
-  // Step 12: Sanitize HTML if needed
+  // Skip whitespace and find closing paren
+  while (i < text.length && /\s/.test(text[i] ?? '')) i++
+  if (text[i] !== ')') return null
+
+  return { url, title, endIndex: i + 1 }
+}
+
+/**
+ * Decode numeric HTML entities (&#65; → A, &#x41; → A)
+ */
+function decodeNumericEntities(text: string): string {
+  return text
+    .replace(/&#(\d+);/g, (_, code: string) => String.fromCharCode(parseInt(code, 10)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, code: string) => String.fromCharCode(parseInt(code, 16)))
+}
+
+// ============================================================================
+// Single-Pass Inline Parser - Element Parsers
+// ============================================================================
+
+/**
+ * Parse a code span starting at position 'start'
+ */
+function parseCodeSpan(text: string, start: number): InlineParseResult {
+  let backticks = 0
+  let i = start
+  while (i < text.length && text[i] === '`') {
+    backticks++
+    i++
+  }
+  if (backticks === 0) return null
+
+  const closePattern = '`'.repeat(backticks)
+  const closeIndex = text.indexOf(closePattern, i)
+  if (closeIndex === -1) return null
+
+  // Verify exact match (not substring of longer run)
+  const afterClose = closeIndex + backticks
+  if (afterClose < text.length && text[afterClose] === '`') {
+    let searchFrom = closeIndex + 1
+    while (searchFrom < text.length) {
+      const nextClose = text.indexOf(closePattern, searchFrom)
+      if (nextClose === -1) return null
+      const afterNext = nextClose + backticks
+      if (afterNext >= text.length || text[afterNext] !== '`') {
+        let code = text.slice(i, nextClose)
+        if (code.startsWith(' ') && code.endsWith(' ') && code.length > 2) {
+          code = code.slice(1, -1)
+        }
+        return {
+          html: `<code>${escapeHtml(code)}</code>`,
+          endIndex: nextClose + backticks,
+        }
+      }
+      searchFrom = nextClose + 1
+    }
+    return null
+  }
+
+  let code = text.slice(i, closeIndex)
+  if (code.startsWith(' ') && code.endsWith(' ') && code.length > 2) {
+    code = code.slice(1, -1)
+  }
+
+  return {
+    html: `<code>${escapeHtml(code)}</code>`,
+    endIndex: closeIndex + backticks,
+  }
+}
+
+/**
+ * Parse an image: ![alt](src "title") or ![alt][ref]
+ */
+function parseImageSinglePass(
+  text: string,
+  start: number,
+  opts: Required<MarkdownOptions>,
+  definitions: LinkDefinitions
+): InlineParseResult {
+  if (text[start] !== '!' || text[start + 1] !== '[') return null
+
+  const altEnd = findClosingBracket(text, start + 1)
+  if (altEnd === -1) return null
+  const alt = text.slice(start + 2, altEnd)
+
+  // Inline style: ![alt](src)
+  if (text[altEnd + 1] === '(') {
+    const result = parseUrlAndTitle(text, altEnd + 1)
+    if (!result) return null
+    const safeSrc = opts.sanitize ? sanitizeUrl(result.url.trim()) : result.url.trim()
+    if (!safeSrc) return null
+    const titleAttr = result.title ? ` title="${escapeHtml(result.title)}"` : ''
+    return {
+      html: `<img src="${escapeHtml(safeSrc)}" alt="${escapeHtml(alt)}"${titleAttr} />`,
+      endIndex: result.endIndex,
+    }
+  }
+
+  // Reference style: ![alt][ref]
+  if (text[altEnd + 1] === '[') {
+    const refEnd = findClosingBracket(text, altEnd + 1)
+    if (refEnd === -1) return null
+    const ref = text.slice(altEnd + 2, refEnd) || alt
+    const def = definitions.get(ref.toLowerCase())
+    if (!def) return null
+    const safeSrc = opts.sanitize ? sanitizeUrl(def.url.trim()) : def.url.trim()
+    if (!safeSrc) return null
+    const titleAttr = def.title ? ` title="${escapeHtml(def.title)}"` : ''
+    return {
+      html: `<img src="${escapeHtml(safeSrc)}" alt="${escapeHtml(alt)}"${titleAttr} />`,
+      endIndex: refEnd + 1,
+    }
+  }
+
+  return null
+}
+
+/**
+ * Parse a link: [text](url) or [text][ref]
+ * If URL is dangerous, outputs just the link text.
+ */
+function parseLinkSinglePass(
+  text: string,
+  start: number,
+  opts: Required<MarkdownOptions>,
+  definitions: LinkDefinitions
+): InlineParseResult {
+  if (text[start] !== '[') return null
+
+  const textEnd = findClosingBracket(text, start)
+  if (textEnd === -1) return null
+  const linkText = text.slice(start + 1, textEnd)
+
+  const target = opts.linkTarget ? ` target="${opts.linkTarget}"` : ''
+
+  // Inline style: [text](url)
+  if (text[textEnd + 1] === '(') {
+    const result = parseUrlAndTitle(text, textEnd + 1)
+    if (!result) return null
+    const safeUrl = opts.sanitize ? sanitizeUrl(result.url.trim()) : result.url.trim()
+    if (!safeUrl) {
+      return { html: linkText, endIndex: result.endIndex }
+    }
+    const titleAttr = result.title ? ` title="${escapeHtml(result.title)}"` : ''
+    return {
+      html: `<a href="${escapeHtml(safeUrl)}"${target}${titleAttr}>${linkText}</a>`,
+      endIndex: result.endIndex,
+    }
+  }
+
+  // Reference style: [text][ref]
+  if (text[textEnd + 1] === '[') {
+    const refEnd = findClosingBracket(text, textEnd + 1)
+    if (refEnd === -1) return null
+    const ref = text.slice(textEnd + 2, refEnd) || linkText
+    const def = definitions.get(ref.toLowerCase())
+    if (!def) return null
+    const safeUrl = opts.sanitize ? sanitizeUrl(def.url.trim()) : def.url.trim()
+    if (!safeUrl) {
+      return { html: linkText, endIndex: refEnd + 1 }
+    }
+    const titleAttr = def.title ? ` title="${escapeHtml(def.title)}"` : ''
+    return {
+      html: `<a href="${escapeHtml(safeUrl)}"${target}${titleAttr}>${linkText}</a>`,
+      endIndex: refEnd + 1,
+    }
+  }
+
+  // Shortcut reference: [text] only
+  const def = definitions.get(linkText.toLowerCase())
+  if (def) {
+    const safeUrl = opts.sanitize ? sanitizeUrl(def.url.trim()) : def.url.trim()
+    if (safeUrl) {
+      const titleAttr = def.title ? ` title="${escapeHtml(def.title)}"` : ''
+      return {
+        html: `<a href="${escapeHtml(safeUrl)}"${target}${titleAttr}>${linkText}</a>`,
+        endIndex: textEnd + 1,
+      }
+    }
+    return { html: linkText, endIndex: textEnd + 1 }
+  }
+
+  return null
+}
+
+/**
+ * Parse an autolink: <url> or <email>
+ */
+function parseAutolink(text: string, start: number): InlineParseResult {
+  if (text[start] !== '<') return null
+
+  const closeIndex = text.indexOf('>', start + 1)
+  if (closeIndex === -1) return null
+
+  const content = text.slice(start + 1, closeIndex)
+
+  if (/^https?:\/\//.test(content)) {
+    return {
+      html: `<a href="${content}">${content}</a>`,
+      endIndex: closeIndex + 1,
+    }
+  }
+
+  if (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(content)) {
+    return {
+      html: `<a href="mailto:${content}">${content}</a>`,
+      endIndex: closeIndex + 1,
+    }
+  }
+
+  return null
+}
+
+/**
+ * Parse emphasis: *, **, ***, _, __, ___
+ * Uses "find rightmost valid closer" approach for proper nesting.
+ */
+function parseEmphasis(
+  text: string,
+  start: number,
+  opts: Required<MarkdownOptions>,
+  definitions: LinkDefinitions
+): InlineParseResult {
+  const char = text[start]
+  if (char !== '*' && char !== '_') return null
+
+  let openCount = 0
+  let i = start
+  while (i < text.length && text[i] === char) {
+    openCount++
+    i++
+  }
+
+  if (i >= text.length || /\s/.test(text[i] ?? '')) return null
+
+  for (let useCount = Math.min(openCount, 3); useCount >= 1; useCount--) {
+    const contentStart = start + useCount
+
+    const closers: Array<{ index: number; count: number }> = []
+    let searchFrom = contentStart
+
+    while (searchFrom < text.length) {
+      let closeIndex = -1
+      for (let j = searchFrom; j < text.length; j++) {
+        if (text[j] === char) {
+          closeIndex = j
+          break
+        }
+      }
+      if (closeIndex === -1) break
+
+      let closeCount = 0
+      let k = closeIndex
+      while (k < text.length && text[k] === char) {
+        closeCount++
+        k++
+      }
+
+      const before = text[closeIndex - 1]
+      const isValidCloser =
+        closeIndex > contentStart &&
+        before !== undefined &&
+        !/\s/.test(before)
+
+      if (isValidCloser && closeCount >= useCount) {
+        closers.push({ index: closeIndex, count: closeCount })
+      }
+
+      searchFrom = closeIndex + closeCount
+    }
+
+    for (let ci = closers.length - 1; ci >= 0; ci--) {
+      const closer = closers[ci]
+      if (!closer) continue
+
+      let content = text.slice(contentStart, closer.index)
+      if (!content) continue
+
+      const extraClosers = closer.count - useCount
+      if (extraClosers > 0) {
+        let unbalancedCount = 0
+        for (let j = 0; j < content.length; j++) {
+          if (content[j] === char) unbalancedCount++
+        }
+        if (unbalancedCount % 2 === 1 && extraClosers >= 1) {
+          content = content + char
+        }
+      }
+
+      const processedContent = processInlineSinglePass(content, opts, definitions)
+
+      let html: string
+      if (useCount === 3) {
+        html = `<strong><em>${processedContent}</em></strong>`
+      } else if (useCount === 2) {
+        html = `<strong>${processedContent}</strong>`
+      } else {
+        html = `<em>${processedContent}</em>`
+      }
+
+      const borrowedClosers = extraClosers > 0 && content.endsWith(char) ? 1 : 0
+      return { html, endIndex: closer.index + useCount + borrowedClosers }
+    }
+  }
+
+  return null
+}
+
+/**
+ * Parse strikethrough: ~~text~~
+ */
+function parseStrikethrough(
+  text: string,
+  start: number,
+  opts: Required<MarkdownOptions>,
+  definitions: LinkDefinitions
+): InlineParseResult {
+  if (text[start] !== '~' || text[start + 1] !== '~') return null
+
+  const closeIndex = text.indexOf('~~', start + 2)
+  if (closeIndex === -1) return null
+
+  const content = text.slice(start + 2, closeIndex)
+  if (!content) return null
+
+  const processedContent = processInlineSinglePass(content, opts, definitions)
+
+  return {
+    html: `<del>${processedContent}</del>`,
+    endIndex: closeIndex + 2,
+  }
+}
+
+/**
+ * Parse GFM autolinks (bare URLs)
+ */
+function parseGfmAutolink(text: string, start: number): InlineParseResult {
+  if (text.slice(start, start + 7) === 'http://' || text.slice(start, start + 8) === 'https://') {
+    let i = start
+    while (i < text.length && !/\s/.test(text[i] ?? '') && text[i] !== '<' && text[i] !== '>') {
+      i++
+    }
+
+    let url = text.slice(start, i)
+    const trailingPunct = /[.,;:!?)\]]+$/
+    const match = url.match(trailingPunct)
+    if (match) {
+      url = url.slice(0, -match[0].length)
+      i -= match[0].length
+    }
+
+    if (url.length > 8) {
+      return {
+        html: `<a href="${url}">${url}</a>`,
+        endIndex: i,
+      }
+    }
+  }
+
+  if (text.slice(start, start + 4) === 'www.') {
+    let i = start
+    while (i < text.length && !/\s/.test(text[i] ?? '') && text[i] !== '<' && text[i] !== '>') {
+      i++
+    }
+
+    let url = text.slice(start, i)
+    const trailingPunct = /[.,;:!?)\]]+$/
+    const match = url.match(trailingPunct)
+    if (match) {
+      url = url.slice(0, -match[0].length)
+      i -= match[0].length
+    }
+
+    if (url.length > 4) {
+      return {
+        html: `<a href="http://${url}">${url}</a>`,
+        endIndex: i,
+      }
+    }
+  }
+
+  const emailMatch = text.slice(start).match(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)
+  if (emailMatch) {
+    return {
+      html: `<a href="mailto:${emailMatch[0]}">${emailMatch[0]}</a>`,
+      endIndex: start + emailMatch[0].length,
+    }
+  }
+
+  return null
+}
+
+// ============================================================================
+// Single-Pass Inline Parser - Main Function
+// ============================================================================
+
+/**
+ * Process inline markdown elements using a single-pass character scanner.
+ * O(n) instead of O(n × m) multi-pass regex approach.
+ */
+function processInlineSinglePass(
+  text: string,
+  opts: Required<MarkdownOptions>,
+  definitions: LinkDefinitions = new Map()
+): string {
+  const parts: string[] = []
+  let i = 0
+
+  while (i < text.length) {
+    const char = text[i]
+    const next = text[i + 1]
+
+    // 1. ESCAPES
+    if (char === '\\' && i + 1 < text.length && isEscapable(next ?? '')) {
+      parts.push(next ?? '')
+      i += 2
+      continue
+    }
+
+    // 2. CODE SPANS
+    if (char === '`') {
+      const result = parseCodeSpan(text, i)
+      if (result) {
+        parts.push(result.html)
+        i = result.endIndex
+        continue
+      }
+    }
+
+    // 3. IMAGES (before links)
+    if (char === '!' && next === '[') {
+      const result = parseImageSinglePass(text, i, opts, definitions)
+      if (result) {
+        parts.push(result.html)
+        i = result.endIndex
+        continue
+      }
+    }
+
+    // 4. LINKS
+    if (char === '[') {
+      const result = parseLinkSinglePass(text, i, opts, definitions)
+      if (result) {
+        parts.push(result.html)
+        i = result.endIndex
+        continue
+      }
+    }
+
+    // 5. AUTOLINKS
+    if (char === '<') {
+      const result = parseAutolink(text, i)
+      if (result) {
+        parts.push(result.html)
+        i = result.endIndex
+        continue
+      }
+    }
+
+    // 6. STRIKETHROUGH (GFM, before emphasis)
+    if (opts.gfm && char === '~' && next === '~') {
+      const result = parseStrikethrough(text, i, opts, definitions)
+      if (result) {
+        parts.push(result.html)
+        i = result.endIndex
+        continue
+      }
+    }
+
+    // 7. EMPHASIS
+    if (char === '*' || char === '_') {
+      const result = parseEmphasis(text, i, opts, definitions)
+      if (result) {
+        parts.push(result.html)
+        i = result.endIndex
+        continue
+      }
+    }
+
+    // 8. HARD LINE BREAKS
+    if (char === '\n') {
+      if (parts.length >= 2) {
+        const last = parts[parts.length - 1]
+        const secondLast = parts[parts.length - 2]
+        if (last === ' ' && secondLast === ' ') {
+          parts.pop()
+          parts.pop()
+          parts.push('<br />\n')
+          i++
+          continue
+        }
+      }
+      if (parts.length >= 1) {
+        const last = parts[parts.length - 1]
+        if (last === '\\') {
+          parts.pop()
+          parts.push('<br />\n')
+          i++
+          continue
+        }
+      }
+      if (opts.breaks) {
+        parts.push('<br />\n')
+        i++
+        continue
+      }
+    }
+
+    // 9. GFM AUTOLINKS (bare URLs)
+    if (opts.gfm) {
+      const prevChar = i > 0 ? text[i - 1] : ''
+      if (i === 0 || /\s/.test(prevChar ?? '') || prevChar === '(') {
+        const result = parseGfmAutolink(text, i)
+        if (result) {
+          parts.push(result.html)
+          i = result.endIndex
+          continue
+        }
+      }
+    }
+
+    // 10. PLAIN CHARACTER
+    parts.push(char ?? '')
+    i++
+  }
+
+  let result = parts.join('')
+
+  // Post-processing
+  result = decodeNumericEntities(result)
+
   if (opts.sanitize) {
     result = sanitizeHtml(result)
   }
-
-  // Step 13: Always remove GFM-disallowed tags (script, style, etc)
-  // When sanitizing, remove content entirely. When not sanitizing, preserve content.
   result = removeDangerousTags(result, !opts.sanitize)
 
   return result
@@ -884,103 +1334,4 @@ function removeDangerousTags(html: string, preserveContent: boolean = true): str
     }
   }
   return html
-}
-
-/**
- * Parse inline links with balanced parentheses support
- */
-function parseLinksSmart(text: string, opts: Required<MarkdownOptions>): string {
-  let result = ''
-  let i = 0
-
-  while (i < text.length) {
-    // Look for link start: [
-    if (text[i] === '[') {
-      // Find the closing ]
-      let j = i + 1
-      let bracketDepth = 1
-      while (j < text.length && bracketDepth > 0) {
-        if (text[j] === '[') bracketDepth++
-        else if (text[j] === ']') bracketDepth--
-        j++
-      }
-
-      if (bracketDepth === 0 && j < text.length && text[j] === '(') {
-        // Found [text]( - now find the closing ) with balanced parens
-        const linkText = text.slice(i + 1, j - 1)
-        let k = j + 1
-        let parenDepth = 1
-        let inQuote = false
-        let quoteChar = ''
-
-        while (k < text.length && parenDepth > 0) {
-          const char = text[k]
-          if (!inQuote) {
-            if (char === '"' || char === "'") {
-              inQuote = true
-              quoteChar = char
-            } else if (char === '(') {
-              parenDepth++
-            } else if (char === ')') {
-              parenDepth--
-            }
-          } else {
-            if (char === quoteChar) {
-              inQuote = false
-            }
-          }
-          k++
-        }
-
-        if (parenDepth === 0) {
-          // Extract URL and title from the content between ( and )
-          const urlPart = text.slice(j + 1, k - 1)
-          let url = ''
-          let title = ''
-
-          // Handle angle bracket URLs
-          if (urlPart.startsWith('<')) {
-            const closeAngle = urlPart.indexOf('>')
-            if (closeAngle > 0) {
-              url = urlPart.slice(1, closeAngle)
-              const rest = urlPart.slice(closeAngle + 1).trim()
-              const titleMatch = rest.match(/^["']([^"']*)["']/)
-              if (titleMatch?.[1]) title = titleMatch[1]
-            }
-          } else {
-            // Parse URL (stops at space or quote)
-            let urlEnd = 0
-            for (urlEnd = 0; urlEnd < urlPart.length; urlEnd++) {
-              const c = urlPart[urlEnd]
-              if (c === ' ' || c === '"' || c === "'") break
-            }
-            url = urlPart.slice(0, urlEnd)
-            const rest = urlPart.slice(urlEnd).trim()
-            const titleMatch = rest.match(/^["']([^"']*)["']/)
-            if (titleMatch?.[1]) title = titleMatch[1]
-          }
-
-          const safeUrl = opts.sanitize ? sanitizeUrl(url.trim()) : url.trim()
-          if (safeUrl) {
-            const target = opts.linkTarget ? ` target="${opts.linkTarget}"` : ''
-            const titleAttr = title ? ` title="${escapeHtml(title)}"` : ''
-            result += `<a href="${escapeHtml(safeUrl)}"${target}${titleAttr}>${linkText}</a>`
-            i = k
-            continue
-          } else {
-            // URL was sanitized away (dangerous protocol) - just output the link text
-            result += linkText
-            i = k
-            continue
-          }
-        }
-      }
-    }
-
-    const char = text[i]
-    if (char) result += char
-    i++
-  }
-
-  return result
 }
