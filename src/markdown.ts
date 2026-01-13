@@ -1293,7 +1293,31 @@ function processInlineSinglePass(
       }
     }
 
-    // 10. BATCH PLAIN CHARACTERS (scan ahead for runs of plain text)
+    // 10. NUMERIC HTML ENTITIES
+    if (char === '&') {
+      // Check for &#123; or &#xABC; patterns
+      const remaining = text.slice(i)
+      const decMatch = remaining.match(/^&#(\d+);/)
+      const hexMatch = remaining.match(/^&#x([0-9a-fA-F]+);/)
+
+      if (decMatch) {
+        const code = parseInt(decMatch[1], 10)
+        parts.push(String.fromCharCode(code))
+        i += decMatch[0].length
+        continue
+      }
+
+      if (hexMatch) {
+        const code = parseInt(hexMatch[1], 16)
+        parts.push(String.fromCharCode(code))
+        i += hexMatch[0].length
+        continue
+      }
+
+      // Not an entity, let it fall through to plain text handling
+    }
+
+    // 11. BATCH PLAIN CHARACTERS (scan ahead for runs of plain text)
     const plainStart = i
     while (i < text.length) {
       const c = text[i]
@@ -1342,8 +1366,6 @@ function processInlineSinglePass(
   let result = parts.join('')
 
   // Post-processing
-  result = decodeNumericEntities(result)
-
   if (opts.sanitize) {
     result = sanitizeHtml(result)
   }
