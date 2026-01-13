@@ -798,6 +798,8 @@ function decodeNumericEntities(text: string): string {
 
 /**
  * Parse a code span starting at position 'start'
+ * Note: String slicing in this function is already optimized -
+ * slices only when building final HTML output for escapeHtml()
  */
 function parseCodeSpan(text: string, start: number): InlineParseResult {
   let backticks = 0
