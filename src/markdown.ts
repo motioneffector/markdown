@@ -1293,7 +1293,48 @@ function processInlineSinglePass(
       }
     }
 
-    // 10. PLAIN CHARACTER
+    // 10. BATCH PLAIN CHARACTERS (scan ahead for runs of plain text)
+    const plainStart = i
+    while (i < text.length) {
+      const c = text[i]
+      const n = text[i + 1]
+
+      // Break on any special character
+      if (c === '\\' || c === '`' || c === '!' || c === '[' || c === '<') break
+      if (c === '*' || c === '_') break
+      if (c === '\n') break
+      if (c === '&') break  // HTML entities
+
+      // Break on GFM features if enabled
+      if (checkStrikethrough && c === '~' && n === '~') break
+      if (checkGfmAutolinks) {
+        // Break on http://, https://, www. patterns
+        if ((c === 'h' || c === 'w')) {
+          if (text.slice(i, i + 7) === 'http://' ||
+              text.slice(i, i + 8) === 'https://' ||
+              text.slice(i, i + 4) === 'www.') break
+        }
+        // Break after whitespace to allow GFM autolink detection (for emails)
+        // Include the space, then break so next iteration starts at alphanumeric char
+        if (i > plainStart && c === ' ' && n && /[a-zA-Z0-9]/.test(n)) {
+          i++  // Include the space
+          break
+        }
+      }
+
+      // Break on space followed by space or newline (hard line break detection)
+      if (c === ' ' && (n === ' ' || n === '\n')) break
+
+      i++
+    }
+
+    // Push the entire plain text run at once
+    if (i > plainStart) {
+      parts.push(text.slice(plainStart, i))
+      continue  // Don't increment i again, already moved forward
+    }
+
+    // If we didn't advance, push single char (shouldn't happen, but safety)
     parts.push(char ?? '')
     i++
   }
