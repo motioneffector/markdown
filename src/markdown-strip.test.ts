@@ -143,7 +143,7 @@ describe('markdownStrip()', () => {
     it('cannot use allow and strip together', () => {
       expect(() => {
         markdownStrip('<p>text</p>', { allow: ['p'], strip: ['em'] })
-      }).toThrow()
+      }).toThrow('Cannot use both')
     })
   })
 
