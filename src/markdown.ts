@@ -1078,61 +1078,71 @@ function collectEmphasisDelimiters(
 /**
  * Match closing delimiters with opening delimiters.
  * This is Phase 2 of the CommonMark delimiter stack algorithm.
- * Modifies the delimiters array in place by updating 'matched' counts.
- * Loops multiple times to handle nested emphasis (e.g., ***text***).
+ * Processes INNERMOST delimiters first to handle nesting correctly.
  */
 function matchEmphasisDelimiters(delimiters: EmphasisDelimiter[]): void {
-  // Loop until no more matches are found (handles nested emphasis)
-  let foundMatch = true
+  // Build list of all potential matches (opener-closer pairs)
+  const potentialMatches: Array<{
+    openerIdx: number
+    closerIdx: number
+    span: number  // distance between them
+    matchCount: number  // how many delimiters to match (1 or 2)
+  }> = []
 
-  while (foundMatch) {
-    foundMatch = false
+  // Find all valid opener-closer pairs
+  for (let closerIdx = 0; closerIdx < delimiters.length; closerIdx++) {
+    const closer = delimiters[closerIdx]
+    if (!closer.canClose) continue
 
-    // Process potential closers from right to left
-    for (let closerIdx = delimiters.length - 1; closerIdx >= 0; closerIdx--) {
-      const closer = delimiters[closerIdx]
+    for (let openerIdx = 0; openerIdx < closerIdx; openerIdx++) {
+      const opener = delimiters[openerIdx]
 
-      // Skip if can't close or already fully matched
-      if (!closer.canClose || closer.matched >= closer.count) {
-        continue
-      }
+      if (!opener.canOpen) continue
+      if (opener.type !== closer.type) continue
+      if (opener.matched >= opener.count) continue
+      if (closer.matched >= closer.count) continue
 
-      // Find matching opener (scanning backwards)
-      for (let openerIdx = closerIdx - 1; openerIdx >= 0; openerIdx--) {
-        const opener = delimiters[openerIdx]
+      // Calculate how many we can match
+      const openerAvailable = opener.count - opener.matched
+      const closerAvailable = closer.count - closer.matched
+      const maxMatch = Math.min(openerAvailable, closerAvailable)
 
-        // Skip if can't open, already fully matched, or different type
-        if (!opener.canOpen || opener.matched >= opener.count) {
-          continue
-        }
-        if (opener.type !== closer.type) {
-          continue
-        }
+      // Prefer 2-delimiter matches (for **strong**)
+      const matchCount = maxMatch >= 2 ? 2 : 1
 
-        // Determine how many delimiters to match
-        // Prefer pairs (** for strong, * for em)
-        const openerAvailable = opener.count - opener.matched
-        const closerAvailable = closer.count - closer.matched
+      // Calculate span (prefer shorter spans = inner matches)
+      const span = closer.position - opener.position
 
-        // Try to match 2 at a time (for **strong**), then 1 (for *em*)
-        let matchCount = Math.min(openerAvailable, closerAvailable)
-        if (matchCount >= 2) {
-          matchCount = 2
-        } else {
-          matchCount = 1
-        }
-
-        // Update matched counts
-        opener.matched += matchCount
-        closer.matched += matchCount
-        foundMatch = true
-
-        // If closer is fully matched, stop searching for openers
-        if (closer.matched >= closer.count) {
-          break
-        }
-      }
+      potentialMatches.push({
+        openerIdx,
+        closerIdx,
+        span,
+        matchCount
+      })
     }
+  }
+
+  // Sort by span (shortest first) = process inner matches before outer
+  potentialMatches.sort((a, b) => a.span - b.span)
+
+  // Apply matches in order (innermost first)
+  for (const match of potentialMatches) {
+    const opener = delimiters[match.openerIdx]
+    const closer = delimiters[match.closerIdx]
+
+    // Check if still available (might have been consumed by inner match)
+    const openerAvailable = opener.count - opener.matched
+    const closerAvailable = closer.count - closer.matched
+
+    if (openerAvailable <= 0 || closerAvailable <= 0) continue
+
+    // Recalculate match count based on current availability
+    const maxMatch = Math.min(openerAvailable, closerAvailable)
+    const matchCount = maxMatch >= 2 ? 2 : 1
+
+    // Apply the match
+    opener.matched += matchCount
+    closer.matched += matchCount
   }
 }
 
