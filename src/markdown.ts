@@ -1082,6 +1082,7 @@ function parseEmphasis(
 
 /**
  * Parse strikethrough: ~~text~~
+ * Note: String slicing is necessary for recursive processing via processInlineSinglePass()
  */
 function parseStrikethrough(
   text: string,
