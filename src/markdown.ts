@@ -1176,6 +1176,10 @@ function processInlineSinglePass(
   const parts: string[] = []
   let i = 0
 
+  // Hoist GFM checks outside loop for performance
+  const checkStrikethrough = opts.gfm === true
+  const checkGfmAutolinks = opts.gfm === true
+
   while (i < text.length) {
     const char = text[i]
     const next = text[i + 1]
@@ -1228,7 +1232,7 @@ function processInlineSinglePass(
     }
 
     // 6. STRIKETHROUGH (GFM, before emphasis)
-    if (opts.gfm && char === '~' && next === '~') {
+    if (checkStrikethrough && char === '~' && next === '~') {
       const result = parseStrikethrough(text, i, opts, definitions)
       if (result) {
         parts.push(result.html)
@@ -1277,7 +1281,7 @@ function processInlineSinglePass(
     }
 
     // 9. GFM AUTOLINKS (bare URLs)
-    if (opts.gfm) {
+    if (checkGfmAutolinks) {
       const prevChar = i > 0 ? text[i - 1] : ''
       if (i === 0 || /\s/.test(prevChar ?? '') || prevChar === '(') {
         const result = parseGfmAutolink(text, i)
