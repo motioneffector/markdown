@@ -996,6 +996,8 @@ function parseAutolink(text: string, start: number): InlineParseResult {
 /**
  * Parse emphasis: *, **, ***, _, __, ___
  * Uses "find rightmost valid closer" approach for proper nesting.
+ * NOTE: This function will be fully refactored in Optimization 9 (non-recursive emphasis)
+ * String slicing optimizations intentionally deferred until that refactor.
  */
 function parseEmphasis(
   text: string,
