@@ -25,6 +25,19 @@ const GFM_EMAIL_PATTERN = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/
 type LinkDefinitions = Map<string, { url: string; title?: string }>
 
 /**
+ * Delimiter for emphasis matching (CommonMark algorithm)
+ * Used in Optimization 9 for non-recursive emphasis parsing
+ */
+interface EmphasisDelimiter {
+  type: '*' | '_'
+  count: number          // How many consecutive delimiters
+  position: number       // Position in text
+  canOpen: boolean       // Can open emphasis
+  canClose: boolean      // Can close emphasis
+  matched: number        // How many have been matched (0 to count)
+}
+
+/**
  * Helper to safely access array elements. Since split('\n') never produces undefined elements
  * but TypeScript's noUncheckedIndexedAccess treats all array access as potentially undefined,
  * this helper provides a type-safe way to access elements we know exist.
