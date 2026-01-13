@@ -1063,6 +1063,58 @@ function collectEmphasisDelimiters(
 }
 
 /**
+ * Match closing delimiters with opening delimiters.
+ * This is Phase 2 of the CommonMark delimiter stack algorithm.
+ * Modifies the delimiters array in place by updating 'matched' counts.
+ */
+function matchEmphasisDelimiters(delimiters: EmphasisDelimiter[]): void {
+  // Process potential closers from right to left
+  for (let closerIdx = delimiters.length - 1; closerIdx >= 0; closerIdx--) {
+    const closer = delimiters[closerIdx]
+
+    // Skip if can't close or already fully matched
+    if (!closer.canClose || closer.matched >= closer.count) {
+      continue
+    }
+
+    // Find matching opener (scanning backwards)
+    for (let openerIdx = closerIdx - 1; openerIdx >= 0; openerIdx--) {
+      const opener = delimiters[openerIdx]
+
+      // Skip if can't open, already fully matched, or different type
+      if (!opener.canOpen || opener.matched >= opener.count) {
+        continue
+      }
+      if (opener.type !== closer.type) {
+        continue
+      }
+
+      // Determine how many delimiters to match
+      // Prefer pairs (** for strong, * for em)
+      const openerAvailable = opener.count - opener.matched
+      const closerAvailable = closer.count - closer.matched
+
+      // Try to match 2 at a time (for **strong**), then 1 (for *em*)
+      let matchCount = Math.min(openerAvailable, closerAvailable)
+      if (matchCount >= 2) {
+        matchCount = 2
+      } else {
+        matchCount = 1
+      }
+
+      // Update matched counts
+      opener.matched += matchCount
+      closer.matched += matchCount
+
+      // If closer is fully matched, stop searching for openers
+      if (closer.matched >= closer.count) {
+        break
+      }
+    }
+  }
+}
+
+/**
  * Parse emphasis: *, **, ***, _, __, ___
  * Uses "find rightmost valid closer" approach for proper nesting.
  * NOTE: This function will be fully refactored in Optimization 9 (non-recursive emphasis)
