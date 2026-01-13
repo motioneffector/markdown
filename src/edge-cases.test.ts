@@ -49,12 +49,12 @@ describe('CommonMark Spec Compliance', () => {
 describe('Performance', () => {
   describe('Speed', () => {
     it('parses 100KB in under 10ms', () => {
-      const largeDoc = '# Heading\n\n'.repeat(5000) // ~100KB
+      const largeDoc = '# Heading\n\nSome paragraph text here.\n\n'.repeat(2500) // ~100KB
       const start = performance.now()
       markdown(largeDoc)
       const end = performance.now()
-      // Relaxed timeout for realistic performance
-      expect(end - start).toBeLessThan(1000)
+      // Allow reasonable time for 100KB parsing
+      expect(end - start).toBeLessThan(100)
     })
 
     it('no regex catastrophic backtracking', () => {
@@ -77,17 +77,19 @@ describe('Performance', () => {
   describe('Memory', () => {
     it('no memory leak on repeated calls', () => {
       const input = '# Heading\n\nParagraph'
+      const results: string[] = []
       for (let i = 0; i < 1000; i++) {
-        markdown(input)
+        results.push(markdown(input))
       }
-      // If this completes without error, no memory leak
-      expect(true).toBe(true)
+      // Verify all calls produced expected output
+      expect(results.every(r => r.includes('<h1>') && r.includes('Paragraph'))).toBe(true)
     })
 
     it('handles 1MB documents', () => {
-      const largeDoc = '# Heading\n\nParagraph\n\n'.repeat(5000) // ~200KB
+      const largeDoc = '# Heading\n\nParagraph\n\n'.repeat(40000) // ~1MB
       const result = markdown(largeDoc)
       expect(result).toContain('<h1>')
+      expect(result.length).toBeGreaterThan(1000000)
     })
   })
 })
@@ -173,27 +175,27 @@ describe('Edge Cases', () => {
 
   describe('Large Documents', () => {
     it('handles 1MB markdown input', () => {
-      const largeInput = '# Heading\n\nParagraph with some text.\n\n'.repeat(5000) // ~200KB (reduced for performance)
+      const largeInput = '# Heading\n\nParagraph with some text.\n\n'.repeat(30000) // ~1MB
       const result = markdown(largeInput)
       expect(result).toContain('<h1>')
-      expect(result.length).toBeGreaterThan(200000)
+      expect(result.length).toBeGreaterThan(1000000)
     })
 
     it('handles 10000 line document', () => {
-      const lines = Array(2000) // Reduced from 10000 for performance
+      const lines = Array(10000)
         .fill(0)
         .map((_, i) => `Line ${i}`)
         .join('\n\n')
       const result = markdown(lines)
       expect(result).toContain('Line 0')
-      expect(result).toContain('Line 1999')
+      expect(result).toContain('Line 9999')
     })
 
     it('handles very long lines', () => {
-      const longLine = 'a'.repeat(50000) // Reduced from 100000 for performance
+      const longLine = 'a'.repeat(100000)
       const result = markdown(longLine)
       expect(result).toContain('<p>')
-      expect(result.length).toBeGreaterThan(50000)
+      expect(result.length).toBeGreaterThan(100000)
     })
   })
 })

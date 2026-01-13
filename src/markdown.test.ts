@@ -136,6 +136,8 @@ describe('Block Elements', () => {
     it('handles multi-line content before underline', () => {
       const result = markdown('Line 1\nLine 2\n===')
       expect(result).toContain('<h1>')
+      expect(result).toContain('Line 1')
+      expect(result).toContain('Line 2')
     })
   })
 
@@ -177,8 +179,11 @@ describe('Block Elements', () => {
 
     it('lazy continuation without > works', () => {
       const result = markdown('> Line 1\nLine 2')
-      expect(result).toContain('Line 1')
-      expect(result).toContain('Line 2')
+      expect(result).toContain('<blockquote>')
+      // CommonMark lazy continuation: Line 2 should be inside blockquote
+      // Both lines should form a single paragraph within the blockquote
+      const expectedPattern = /<blockquote>[\s\S]*<p>[\s\S]*Line 1[\s\S]*Line 2[\s\S]*<\/p>[\s\S]*<\/blockquote>/
+      expect(result).toMatch(expectedPattern)
     })
 
     it('handles multiple paragraphs in quote', () => {
