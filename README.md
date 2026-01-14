@@ -1,6 +1,6 @@
 # @motioneffector/markdown
 
-A lightweight, standards-compliant markdown parser supporting CommonMark and GitHub Flavored Markdown.
+A lightweight, standards-compliant markdown parser for rendering user content safely.
 
 [![npm version](https://img.shields.io/npm/v/@motioneffector/markdown.svg)](https://www.npmjs.com/package/@motioneffector/markdown)
 [![license](https://img.shields.io/npm/l/@motioneffector/markdown.svg)](https://github.com/motioneffector/markdown/blob/main/LICENSE)
