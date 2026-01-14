@@ -549,6 +549,16 @@ function parseList(
     return indent
   }
 
+  // Cache line retrieval to avoid repeated getLine() calls
+  const lineCache = new Map<number, string>()
+
+  const getCachedLine = (idx: number): string => {
+    if (lineCache.has(idx)) return lineCache.get(idx)!
+    const line = getLine(lines, idx)
+    lineCache.set(idx, line)
+    return line
+  }
+
   // Determine list marker pattern
   const isOrderedList = listType === 'ol'
   const listMarkerRegex = isOrderedList ? /^(\d+)\.\s(.*)$/ : /^[*\-+]\s(.*)$/
@@ -557,7 +567,7 @@ function parseList(
   const baseIndent = isOrderedList ? 3 : 2
 
   while (i < lines.length) {
-    const line = getLine(lines, i)
+    const line = getCachedLine(i)
 
     // Check for list item
     const match = line.match(listMarkerRegex)
@@ -583,13 +593,13 @@ function parseList(
 
       // Collect continuation lines and nested content
       while (i < lines.length) {
-        const nextLine = getLine(lines, i)
+        const nextLine = getCachedLine(i)
 
         // Blank line might indicate loose list or end of item
         if (isBlankLine(nextLine)) {
           // Check if there's more content for this item after the blank line
           if (i + 1 < lines.length) {
-            const afterBlank = getLine(lines, i + 1)
+            const afterBlank = getCachedLine(i + 1)
             // If next non-blank line is indented enough, it's continuation
             const afterIndent = getIndent(i + 1)
             if (afterIndent >= baseIndent) {
