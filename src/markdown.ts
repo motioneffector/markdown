@@ -1759,8 +1759,14 @@ function processInlineSinglePass(
 }
 
 function sanitizeHtml(html: string): string {
-  // Remove event handlers
+  // Remove event handlers (with or without quotes)
   html = html.replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, '')
+  html = html.replace(/\s+on\w+\s*=\s*[^\s>"']+/gi, '')
+
+  // Remove javascript: protocol (case-insensitive, with optional leading whitespace)
+  html = html.replace(/(\s+(?:href|src|action|formaction|data)\s*=\s*["'])\s*javascript:/gi, '$1')
+  html = html.replace(/(\s+(?:href|src|action|formaction|data)\s*=\s*)\s*javascript:/gi, '$1')
+
   return html
 }
 
