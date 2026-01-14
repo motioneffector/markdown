@@ -170,42 +170,54 @@ function parseBlocks(input: string, opts: Required<MarkdownOptions>, depth: numb
 
     // Setext Headings: Check for === or --- underline ahead
     // Multi-line content is allowed before the underline
+    // Optimized to use index tracking instead of building array
     {
       let foundSetextHeading = false
       let j = i
-      const headingLines: string[] = []
+      let headingStartIdx = -1
+      let headingEndIdx = -1
+
       while (j < lines.length) {
         const currentLine = lines[j]
         if (!currentLine || isBlankLine(currentLine)) break
 
-        // Check if this line is the underline
-        if (/^=+\s*$/.test(currentLine) && headingLines.length > 0) {
+        if (headingStartIdx === -1) headingStartIdx = j
+
+        // Check for level 1 underline (===)
+        if (/^=+\s*$/.test(currentLine) && headingStartIdx !== -1 && j > headingStartIdx) {
+          // Extract heading text using slice (one operation instead of join)
+          const headingText = lines.slice(headingStartIdx, j).join('\n').trim()
           blocks.push({
             type: 'heading',
             level: 1,
-            text: headingLines.join('\n').trim(),
+            text: headingText,
           })
           i = j + 1
           foundSetextHeading = true
           break
         }
-        const firstHeadingLine = headingLines[0]
-        // Check if first line is a thematic break pattern (---, ***, ___)
+
+        // Check for level 2 underline (---)
+        const firstHeadingLine = headingStartIdx !== -1 ? lines[headingStartIdx] : ''
         const isThematicBreak = firstHeadingLine && /^(?:(?:-\s*){3,}|(?:\*\s*){3,}|(?:_\s*){3,})$/.test(firstHeadingLine)
-        if (/^-+\s*$/.test(currentLine) && headingLines.length > 0 &&
+
+        if (/^-+\s*$/.test(currentLine) && headingStartIdx !== -1 && j > headingStartIdx &&
             firstHeadingLine && !/^[*\-+]\s/.test(firstHeadingLine) && !/^\d+\.\s/.test(firstHeadingLine) && !isThematicBreak) {
+          const headingText = lines.slice(headingStartIdx, j).join('\n').trim()
           blocks.push({
             type: 'heading',
             level: 2,
-            text: headingLines.join('\n').trim(),
+            text: headingText,
           })
           i = j + 1
           foundSetextHeading = true
           break
         }
-        headingLines.push(currentLine)
+
+        headingEndIdx = j
         j++
       }
+
       if (foundSetextHeading) continue
     }
 
