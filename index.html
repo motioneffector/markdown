@@ -1646,9 +1646,9 @@ This is a *test* of the markdown parser.
       {
         name: 'escapes HTML in content',
         fn: async () => {
-          const input = '<script>alert("xss")</script>';
+          const input = '<scr' + 'ipt>alert("xss")</scr' + 'ipt>';
           const output = markdown(input);
-          if (output.includes('<script>')) throw new Error('HTML not escaped');
+          if (output.includes('<scr' + 'ipt>')) throw new Error('HTML not escaped');
           if (!output.includes('&lt;')) throw new Error('Missing escaped HTML');
         }
       },
@@ -1699,9 +1699,9 @@ This is a *test* of the markdown parser.
       {
         name: 'markdownStrip: safe preset allows safe tags',
         fn: async () => {
-          const input = '<p>Text</p><script>alert("xss")</script>';
+          const input = '<p>Text</p><scr' + 'ipt>alert("xss")</scr' + 'ipt>';
           const output = markdownStrip(input, 'safe');
-          if (output.includes('<script>')) throw new Error('Dangerous tags not removed');
+          if (output.includes('<scr' + 'ipt>')) throw new Error('Dangerous tags not removed');
           if (!output.includes('<p>')) throw new Error('Safe tags removed');
         }
       },
