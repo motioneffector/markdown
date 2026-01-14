@@ -233,25 +233,43 @@ function parseBlocks(input: string, opts: Required<MarkdownOptions>, depth: numb
       continue
     }
 
-    // Indented code blocks (4 spaces)
+    // Indented code blocks (4 spaces) - optimized with index tracking
     if (/^ {4}/.test(line)) {
-      const codeLines: string[] = []
+      const codeStartIdx = i
+      let codeEndIdx = i
+
+      // Find extent of code block
       while (i < lines.length) {
         const currentLine = lines[i]
-        if (!currentLine) break
-        if (!/^ {4}/.test(currentLine) && !isBlankLine(currentLine)) break
+        if (!currentLine) {
+          // Blank line - might continue
+          i++
+          continue
+        }
+        if (!/^ {4}/.test(currentLine) && !isBlankLine(currentLine)) {
+          // Not indented and not blank - end of code block
+          break
+        }
+        codeEndIdx = i
+        i++
+      }
 
-        if (/^ {4}/.test(currentLine)) {
-          codeLines.push(currentLine.slice(4))
+      // Trim trailing blank lines
+      while (codeEndIdx > codeStartIdx && isBlankLine(lines[codeEndIdx])) {
+        codeEndIdx--
+      }
+
+      // Extract code in single operation
+      const codeLines = []
+      for (let idx = codeStartIdx; idx <= codeEndIdx; idx++) {
+        const codeLine = lines[idx]
+        if (codeLine && /^ {4}/.test(codeLine)) {
+          codeLines.push(codeLine.slice(4))
         } else {
           codeLines.push('')
         }
-        i++
       }
-      // Trim trailing blank lines
-      while (codeLines.length > 0 && codeLines[codeLines.length - 1] === '') {
-        codeLines.pop()
-      }
+
       blocks.push({
         type: 'code',
         language: '',
@@ -260,25 +278,35 @@ function parseBlocks(input: string, opts: Required<MarkdownOptions>, depth: numb
       continue
     }
 
-    // Fenced code blocks
+    // Fenced code blocks - optimized with index tracking
     const fenceMatch = line.match(/^(`{3,}|~{3,})(.*)$/)
     if (fenceMatch?.[1] && fenceMatch[2] !== undefined) {
       const fence = fenceMatch[1]
       const fenceChar = fence[0]
       const fenceLen = fence.length
       const language = fenceMatch[2].trim()
-      const codeLines: string[] = []
+
+      const codeStartIdx = i + 1
+      let codeEndIdx = i + 1
+
       i++
       while (i < lines.length) {
         const codeLine = getLine(lines, i)
-        if (fenceChar && codeLine.startsWith(fenceChar.repeat(fenceLen))) break
-        codeLines.push(codeLine)
+        if (fenceChar && codeLine.startsWith(fenceChar.repeat(fenceLen))) {
+          codeEndIdx = i - 1
+          break
+        }
+        codeEndIdx = i
         i++
       }
+
+      // Extract code lines in single operation
+      const codeContent = lines.slice(codeStartIdx, codeEndIdx + 1).join('\n')
+
       blocks.push({
         type: 'code',
         language,
-        code: codeLines.join('\n'),
+        code: codeContent,
       })
       i++ // skip closing fence
       continue
