@@ -1,7 +1,8 @@
 import { markdown } from './src/markdown'
 
-// Create 100KB test document
-const largeDoc = '# Heading\n\nSome paragraph text here.\n\n'.repeat(2500)
+// Create 100KB test document (per CommonMark spec requirement)
+// String is 33 bytes, repeat 3031 times ≈ 100,023 bytes (~100KB)
+const largeDoc = '# Heading\n\nSome paragraph text.\n\n'.repeat(3031)
 
 console.log('Document size:', largeDoc.length, 'bytes')
 console.log('Target: <10ms\n')

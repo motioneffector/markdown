@@ -1224,8 +1224,9 @@ function buildEmphasisHtml(
     html = `<em>${processedContent}</em>`
   }
 
-  // Calculate end index (after the closer)
-  const endIndex = closer.position + matchCount
+  // Calculate end index (after ALL matched delimiters in the closer)
+  // Must use closer.matched (not matchCount) to account for shared closers
+  const endIndex = closer.position + closer.matched
 
   return { html, endIndex }
 }
