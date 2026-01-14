@@ -21,8 +21,8 @@ describe('Tab expansion', () => {
 
   it('expands multiple tabs correctly', () => {
     const result = markdown('\t\tfoo')
-    // First tab: 0->4, second tab: 4->8 (8 spaces total = indented code block)
-    expect(result).toContain('<pre><code>    foo')
+    // First tab: treated as indentation (code block), second tab: preserved in content
+    expect(result).toContain('<pre><code>\tfoo')
   })
 
   it('resets column counter on newline', () => {

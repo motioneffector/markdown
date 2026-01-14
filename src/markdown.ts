@@ -87,14 +87,17 @@ export function markdown(input: string, options?: MarkdownOptions): string {
     return ''
   }
 
-  // Expand tabs to spaces per CommonMark spec
-  const expandedInput = expandTabs(input)
+  // Extract link definitions first (before tab expansion to maintain line mapping)
+  const { text: cleanedInput, definitions } = extractLinkDefinitions(input)
 
-  // Extract link definitions first (two-pass approach for reference links)
-  const { text: cleanedInput, definitions } = extractLinkDefinitions(expandedInput)
+  // Store original lines for tab preservation in code blocks
+  const originalLines = cleanedInput.split('\n')
 
-  // Parse blocks with depth tracking
-  const blocks = parseBlocks(cleanedInput, opts, 0)
+  // Expand tabs to spaces per CommonMark spec (for structure detection)
+  const expandedInput = expandTabs(cleanedInput)
+
+  // Parse blocks with depth tracking, passing original lines for code block content
+  const blocks = parseBlocks(expandedInput, opts, 0, originalLines)
 
   // Render blocks to HTML with depth tracking
   return blocks.map(block => renderBlock(block, opts, definitions, 0)).join('\n')
@@ -114,7 +117,8 @@ function markdownInternal(
   }
 
   // Parse blocks with current depth
-  const blocks = parseBlocks(input, opts, depth)
+  // Note: originalLines not available in internal calls (already processed)
+  const blocks = parseBlocks(input, opts, depth, undefined)
 
   // Render blocks to HTML
   return blocks.map(block => renderBlock(block, opts, definitions, depth)).join('\n')
@@ -163,7 +167,12 @@ interface Block {
   [key: string]: unknown
 }
 
-function parseBlocks(input: string, opts: Required<MarkdownOptions>, depth: number = 0): Block[] {
+function parseBlocks(
+  input: string,
+  opts: Required<MarkdownOptions>,
+  depth: number = 0,
+  originalLines?: string[]
+): Block[] {
   // Prevent excessive nesting - stop parsing if too deep
   if (depth >= MAX_DEPTH) {
     return [{ type: 'paragraph', text: input }]
@@ -290,21 +299,43 @@ function parseBlocks(input: string, opts: Required<MarkdownOptions>, depth: numb
         codeEndIdx--
       }
 
-      // Extract code in single operation
-      const codeLines = []
-      for (let idx = codeStartIdx; idx <= codeEndIdx; idx++) {
-        const codeLine = lines[idx]
-        if (codeLine && /^ {4}/.test(codeLine)) {
-          codeLines.push(codeLine.slice(4))
-        } else {
-          codeLines.push('')
-        }
-      }
+      // Extract code content, preserving tabs from originalLines if available
+      const codeContent = originalLines
+        ? (() => {
+            const content = originalLines
+              .slice(codeStartIdx, codeEndIdx + 1)
+              .map(line => {
+                // Remove 4-space or 1-tab indentation per CommonMark
+                if (line.startsWith('\t')) return line.slice(1)
+                if (line.startsWith('    ')) return line.slice(4)
+                // Handle mixed tab+space indentation (up to 3 spaces + tab)
+                const match = line.match(/^( {0,3}\t)/)
+                if (match) return line.slice(match[0].length)
+                // Blank lines
+                return line
+              })
+              .join('\n')
+            // Preserve trailing newline if present in original
+            return codeEndIdx + 1 < originalLines.length ? content + '\n' : content
+          })()
+        : (() => {
+            // Fallback to current behavior (expanded tabs)
+            const codeLines = []
+            for (let idx = codeStartIdx; idx <= codeEndIdx; idx++) {
+              const codeLine = lines[idx]
+              if (codeLine && /^ {4}/.test(codeLine)) {
+                codeLines.push(codeLine.slice(4))
+              } else {
+                codeLines.push('')
+              }
+            }
+            return codeLines.join('\n')
+          })()
 
       blocks.push({
         type: 'code',
         language: '',
-        code: codeLines.join('\n'),
+        code: codeContent,
       })
       continue
     }
@@ -331,8 +362,16 @@ function parseBlocks(input: string, opts: Required<MarkdownOptions>, depth: numb
         i++
       }
 
-      // Extract code lines in single operation
-      const codeContent = lines.slice(codeStartIdx, codeEndIdx + 1).join('\n')
+      // Extract code content, preserving tabs from originalLines if available
+      const codeContent = originalLines
+        ? (() => {
+            const content = originalLines.slice(codeStartIdx, codeEndIdx + 1).join('\n')
+            // Preserve trailing newline if present in original
+            return codeEndIdx + 1 < originalLines.length && i < lines.length
+              ? content + '\n'
+              : content
+          })()
+        : lines.slice(codeStartIdx, codeEndIdx + 1).join('\n')
 
       blocks.push({
         type: 'code',
@@ -671,7 +710,8 @@ function parseList(
       const nestedContent = itemLines.join('\n')
       let nestedBlocks: Block[] = []
       if (nestedContent.trim() && nestedContent !== line && depth < MAX_DEPTH) {
-        nestedBlocks = parseBlocks(nestedContent, opts, depth + 1)
+        // Note: originalLines not threaded through nested list items (complex line mapping)
+        nestedBlocks = parseBlocks(nestedContent, opts, depth + 1, undefined)
       }
 
       items.push({
