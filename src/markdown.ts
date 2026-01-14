@@ -47,6 +47,34 @@ function getLine(lines: string[], index: number): string {
   return lines[index] ?? ''
 }
 
+/**
+ * Expand tabs to spaces per CommonMark spec section 2.2.
+ * Tabs advance to next tab stop (columns 4, 8, 12, 16...).
+ */
+function expandTabs(text: string): string {
+  let result = ''
+  let column = 0
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i]
+
+    if (char === '\t') {
+      // Calculate spaces needed to reach next tab stop (multiple of 4)
+      const spacesToAdd = 4 - (column % 4)
+      result += ' '.repeat(spacesToAdd)
+      column += spacesToAdd
+    } else if (char === '\n') {
+      result += char
+      column = 0  // Reset column on newline
+    } else {
+      result += char
+      column++
+    }
+  }
+
+  return result
+}
+
 export function markdown(input: string, options?: MarkdownOptions): string {
   const opts: Required<MarkdownOptions> = {
     gfm: options?.gfm ?? true,
@@ -59,8 +87,11 @@ export function markdown(input: string, options?: MarkdownOptions): string {
     return ''
   }
 
+  // Expand tabs to spaces per CommonMark spec
+  const expandedInput = expandTabs(input)
+
   // Extract link definitions first (two-pass approach for reference links)
-  const { text: cleanedInput, definitions } = extractLinkDefinitions(input)
+  const { text: cleanedInput, definitions } = extractLinkDefinitions(expandedInput)
 
   // Parse blocks with depth tracking
   const blocks = parseBlocks(cleanedInput, opts, 0)
