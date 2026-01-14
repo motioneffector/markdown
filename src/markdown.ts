@@ -35,6 +35,7 @@ interface EmphasisDelimiter {
   canOpen: boolean       // Can open emphasis
   canClose: boolean      // Can close emphasis
   matched: number        // How many have been matched (0 to count)
+  pairedWith?: number    // Index of the paired delimiter (for tracking opener-closer pairs)
 }
 
 /**
@@ -1107,8 +1108,8 @@ function matchEmphasisDelimiters(delimiters: EmphasisDelimiter[]): void {
       const closerAvailable = closer.count - closer.matched
       const maxMatch = Math.min(openerAvailable, closerAvailable)
 
-      // Prefer 2-delimiter matches (for **strong**)
-      const matchCount = maxMatch >= 2 ? 2 : 1
+      // Match up to 3 delimiters (for ***both***)
+      const matchCount = Math.min(maxMatch, 3)
 
       // Calculate span (prefer shorter spans = inner matches)
       const span = closer.position - opener.position
@@ -1138,18 +1139,21 @@ function matchEmphasisDelimiters(delimiters: EmphasisDelimiter[]): void {
 
     // Recalculate match count based on current availability
     const maxMatch = Math.min(openerAvailable, closerAvailable)
-    const matchCount = maxMatch >= 2 ? 2 : 1
+    const matchCount = Math.min(maxMatch, 3)
 
     // Apply the match
     opener.matched += matchCount
     closer.matched += matchCount
+
+    // Track pairing (opener points to closer)
+    opener.pairedWith = match.closerIdx
   }
 }
 
 /**
  * Build HTML output from matched delimiters.
  * This is Phase 3 of the CommonMark delimiter stack algorithm.
- * Finds the OUTERMOST matched pair and recursively processes content.
+ * Finds the LEFTMOST matched pair (starts earliest) and recursively processes.
  */
 function buildEmphasisHtml(
   text: string,
@@ -1161,10 +1165,10 @@ function buildEmphasisHtml(
 ): { html: string; endIndex: number } | null {
   if (delimiters.length === 0) return null
 
-  // Find the FIRST opener with matches (leftmost)
+  // Find the LEFTMOST opener with matches (earliest position)
   let openerIdx = -1
   for (let i = 0; i < delimiters.length; i++) {
-    if (delimiters[i].canOpen && delimiters[i].matched > 0) {
+    if (delimiters[i].canOpen && delimiters[i].matched > 0 && delimiters[i].pairedWith !== undefined) {
       openerIdx = i
       break
     }
@@ -1174,27 +1178,37 @@ function buildEmphasisHtml(
 
   const opener = delimiters[openerIdx]
 
-  // Find its matching closer
-  let closerIdx = -1
-  for (let i = openerIdx + 1; i < delimiters.length; i++) {
-    const d = delimiters[i]
-    if (d.canClose && d.matched > 0 && d.type === opener.type) {
-      // Check if this closer matches our opener's match count
-      if (d.matched === opener.matched ||
-          (d.matched >= 2 && opener.matched >= 2)) {
-        closerIdx = i
-        break
+  // Find its paired closer using the pairedWith field
+  const closerIdx = opener.pairedWith
+  if (closerIdx === undefined || closerIdx >= delimiters.length) return null
+
+  const closer = delimiters[closerIdx]
+  if (!closer.canClose || closer.matched === 0) return null
+
+  // Determine how many delimiters to use for this match
+  const matchCount = Math.min(opener.matched, closer.matched, 3)
+
+  // Extract content between opener and closer
+  const contentStart = opener.position + matchCount
+  let contentEnd = closer.position
+
+  // Check if any inner openers are paired with the same closer
+  // If so, we need to include those delimiter characters in the content
+  // so they can be processed recursively
+  for (let i = openerIdx + 1; i < closerIdx; i++) {
+    const innerOpener = delimiters[i]
+    if (innerOpener.canOpen && innerOpener.pairedWith === closerIdx) {
+      // This inner opener is paired with our closer
+      // We need to include its share of the closing delimiters
+      const innerMatchCount = Math.min(innerOpener.matched, closer.matched, 3)
+      const extendBy = Math.min(innerMatchCount, matchCount - 1)
+      if (extendBy > 0) {
+        contentEnd = closer.position + extendBy
       }
+      break  // Only need to extend once for the first inner match
     }
   }
 
-  if (closerIdx === -1) return null
-
-  const closer = delimiters[closerIdx]
-
-  // Extract content between opener and closer
-  const contentStart = opener.position + opener.matched
-  const contentEnd = closer.position
   const content = text.slice(contentStart, contentEnd)
 
   // Recursively process the content (will find inner emphasis)
@@ -1202,7 +1216,6 @@ function buildEmphasisHtml(
 
   // Build HTML based on match count
   let html: string
-  const matchCount = opener.matched
   if (matchCount >= 3) {
     html = `<strong><em>${processedContent}</em></strong>`
   } else if (matchCount === 2) {
@@ -1212,15 +1225,14 @@ function buildEmphasisHtml(
   }
 
   // Calculate end index (after the closer)
-  const endIndex = closer.position + closer.matched
+  const endIndex = closer.position + matchCount
 
   return { html, endIndex }
 }
 
 /**
  * Parse emphasis: *, **, ***, _, __, ___
- * Uses "find rightmost valid closer" approach for proper nesting.
- * NOTE: CommonMark delimiter stack helpers above for future optimization
+ * Uses CommonMark delimiter stack algorithm (iterative, handles nesting correctly).
  */
 function parseEmphasis(
   text: string,
@@ -1231,6 +1243,7 @@ function parseEmphasis(
   const char = text[start]
   if (char !== '*' && char !== '_') return null
 
+  // Count opening delimiters
   let openCount = 0
   let i = start
   while (i < text.length && text[i] === char) {
@@ -1238,73 +1251,40 @@ function parseEmphasis(
     i++
   }
 
+  // Must have non-whitespace after opening
   if (i >= text.length || /\s/.test(text[i] ?? '')) return null
 
-  for (let useCount = Math.min(openCount, 3); useCount >= 1; useCount--) {
-    const contentStart = start + useCount
+  // Find potential end of emphasis span
+  // Look for matching delimiter type
+  let searchEnd = i + 1
+  let foundClosingDelim = false
 
-    const closers: Array<{ index: number; count: number }> = []
-    let searchFrom = contentStart
-
-    while (searchFrom < text.length) {
-      const closeIndex = text.indexOf(char, searchFrom)
-      if (closeIndex === -1) break
-
-      let closeCount = 0
-      let k = closeIndex
-      while (k < text.length && text[k] === char) {
-        closeCount++
-        k++
-      }
-
-      const before = text[closeIndex - 1]
-      const isValidCloser =
-        closeIndex > contentStart &&
-        before !== undefined &&
-        !/\s/.test(before)
-
-      if (isValidCloser && closeCount >= useCount) {
-        closers.push({ index: closeIndex, count: closeCount })
-      }
-
-      searchFrom = closeIndex + closeCount
+  while (searchEnd < text.length && searchEnd - start < 1000) {
+    if (text[searchEnd] === char) {
+      foundClosingDelim = true
+      // Extend search a bit further to capture all potential closers
+      searchEnd += 50
+      if (searchEnd > text.length) searchEnd = text.length
+      break
     }
-
-    for (let ci = closers.length - 1; ci >= 0; ci--) {
-      const closer = closers[ci]
-      if (!closer) continue
-
-      let content = text.slice(contentStart, closer.index)
-      if (!content) continue
-
-      const extraClosers = closer.count - useCount
-      if (extraClosers > 0) {
-        let unbalancedCount = 0
-        for (let j = 0; j < content.length; j++) {
-          if (content[j] === char) unbalancedCount++
-        }
-        if (unbalancedCount % 2 === 1 && extraClosers >= 1) {
-          content = content + char
-        }
-      }
-
-      const processedContent = processInlineSinglePass(content, opts, definitions)
-
-      let html: string
-      if (useCount === 3) {
-        html = `<strong><em>${processedContent}</em></strong>`
-      } else if (useCount === 2) {
-        html = `<strong>${processedContent}</strong>`
-      } else {
-        html = `<em>${processedContent}</em>`
-      }
-
-      const borrowedClosers = extraClosers > 0 && content.endsWith(char) ? 1 : 0
-      return { html, endIndex: closer.index + useCount + borrowedClosers }
-    }
+    searchEnd++
   }
 
-  return null
+  if (!foundClosingDelim) return null
+
+  // Apply CommonMark delimiter stack algorithm
+  // Phase 1: Collect delimiters
+  const delimiters = collectEmphasisDelimiters(text, start, searchEnd)
+
+  if (delimiters.length < 2) return null
+
+  // Phase 2: Match delimiters (innermost first)
+  matchEmphasisDelimiters(delimiters)
+
+  // Phase 3: Build HTML
+  const result = buildEmphasisHtml(text, start, searchEnd, delimiters, opts, definitions)
+
+  return result
 }
 
 /**
