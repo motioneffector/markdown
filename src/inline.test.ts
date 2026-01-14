@@ -208,6 +208,98 @@ describe('Inline Elements', () => {
     })
   })
 
+  describe('Backslash escapes - extended ASCII punctuation', () => {
+    it('escapes double quote', () => {
+      const result = markdown('foo \\"bar\\"')
+      expect(result).toBe('<p>foo "bar"</p>')
+    })
+
+    it('escapes dollar sign', () => {
+      const result = markdown('\\$100')
+      expect(result).toBe('<p>$100</p>')
+    })
+
+    it('escapes percent', () => {
+      const result = markdown('50\\% off')
+      expect(result).toBe('<p>50% off</p>')
+    })
+
+    it('escapes ampersand', () => {
+      const result = markdown('foo \\& bar')
+      expect(result).toContain('&')
+    })
+
+    it('escapes apostrophe', () => {
+      const result = markdown("don\\'t")
+      expect(result).toContain("'")
+    })
+
+    it('escapes forward slash', () => {
+      const result = markdown('path\\/to\\/file')
+      expect(result).toBe('<p>path/to/file</p>')
+    })
+
+    it('escapes colon', () => {
+      const result = markdown('foo\\: bar')
+      expect(result).toBe('<p>foo: bar</p>')
+    })
+
+    it('escapes semicolon', () => {
+      const result = markdown('foo\\; bar')
+      expect(result).toBe('<p>foo; bar</p>')
+    })
+
+    it('escapes angle brackets', () => {
+      const result = markdown('\\<foo\\>')
+      expect(result).toContain('<')
+      expect(result).toContain('>')
+    })
+
+    it('escapes equals', () => {
+      const result = markdown('x \\= y')
+      expect(result).toBe('<p>x = y</p>')
+    })
+
+    it('escapes question mark', () => {
+      const result = markdown('foo\\? bar')
+      expect(result).toBe('<p>foo? bar</p>')
+    })
+
+    it('escapes at sign', () => {
+      const result = markdown('foo\\@bar')
+      expect(result).toBe('<p>foo@bar</p>')
+    })
+
+    it('escapes caret', () => {
+      const result = markdown('x\\^2')
+      expect(result).toBe('<p>x^2</p>')
+    })
+
+    it('escapes comma', () => {
+      const result = markdown('one\\, two')
+      expect(result).toBe('<p>one, two</p>')
+    })
+
+    it('escapes all new ASCII punctuation together', () => {
+      const input = '\\"\\ \\$\\%\\&\\\'\\,\\/\\:\\;\\<\\=\\>\\?\\@\\^'
+      const result = markdown(input)
+      // Should contain unescaped versions of all these characters
+      expect(result).toContain('"')
+      expect(result).toContain('$')
+      expect(result).toContain('%')
+      expect(result).toContain('&')
+      expect(result).toContain("'")
+      expect(result).toContain(',')
+      expect(result).toContain('/')
+      expect(result).toContain(':')
+      expect(result).toContain(';')
+      expect(result).toContain('=')
+      expect(result).toContain('?')
+      expect(result).toContain('@')
+      expect(result).toContain('^')
+    })
+  })
+
   describe('HTML Entities', () => {
     it('converts &amp; to &', () => {
       const result = markdown('&amp;')

@@ -853,9 +853,11 @@ type InlineParseResult = { html: string; endIndex: number } | null
 
 /**
  * Characters that can be escaped with backslash
+ * CommonMark spec 6.1: All ASCII punctuation can be escaped
+ * Full set: !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~
  */
 function isEscapable(char: string): boolean {
-  return '\\`*_{}[]()#+-.!|~'.includes(char)
+  return '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'.includes(char)
 }
 
 /**
