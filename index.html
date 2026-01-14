@@ -1644,12 +1644,21 @@ This is a *test* of the markdown parser.
 
       // Edge cases and escaping
       {
-        name: 'removes dangerous script tags',
+        name: 'removes dangerous script tags entirely with sanitize',
         fn: async () => {
           const input = '<scr' + 'ipt>alert("xss")</scr' + 'ipt>';
-          const output = markdown(input);
+          const output = markdown(input, { sanitize: true });
           if (output.includes('<scr' + 'ipt>')) throw new Error('Script tags not removed');
-          if (!output.includes('alert("xss")')) throw new Error('Content should be preserved');
+          if (output.includes('alert("xss")')) throw new Error('Content should be removed with sanitize:true');
+        }
+      },
+      {
+        name: 'preserves content when removing dangerous tags without sanitize',
+        fn: async () => {
+          const input = '<scr' + 'ipt>alert("xss")</scr' + 'ipt>';
+          const output = markdown(input, { sanitize: false });
+          if (output.includes('<scr' + 'ipt>')) throw new Error('Script tags not removed');
+          if (!output.includes('alert("xss")')) throw new Error('Content should be preserved with sanitize:false');
         }
       },
       {
