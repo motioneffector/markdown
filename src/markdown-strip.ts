@@ -1,5 +1,6 @@
 import type { StripPreset, StripConfig } from './types'
 import { markdown } from './markdown'
+import { ValidationError } from './errors'
 
 const PRESETS: Record<StripPreset, string[]> = {
   plaintext: [],
@@ -55,7 +56,7 @@ export function markdownStrip(
   } else {
     // Custom config
     if (config.allow && config.strip) {
-      throw new Error('Cannot use both "allow" and "strip" options')
+      throw new ValidationError('Cannot use both "allow" and "strip" options')
     }
 
     unwrap = config.unwrap ?? true
@@ -102,6 +103,15 @@ function stripTags(html: string, allowedTags: string[], unwrap: boolean): string
     const regex = new RegExp(`<${tag}[^>]*>.*?</${tag}>`, 'gi')
     result = result.replace(regex, '')
     result = result.replace(new RegExp(`<${tag}[^>]*>`, 'gi'), '')
+  }
+
+  // If no tags are allowed (plaintext mode), remove ALL HTML tags
+  if (allowedTags.length === 0) {
+    // Remove all HTML tags including malformed ones
+    result = result.replace(/<[^>]*>/g, '')
+    // Remove any remaining angle brackets (malformed tags)
+    result = result.replace(/[<>]/g, '')
+    return result
   }
 
   // Remove or unwrap disallowed tags

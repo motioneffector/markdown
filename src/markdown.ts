@@ -295,7 +295,7 @@ function parseBlocks(
       }
 
       // Trim trailing blank lines
-      while (codeEndIdx > codeStartIdx && isBlankLine(lines[codeEndIdx])) {
+      while (codeEndIdx > codeStartIdx && isBlankLine(lines[codeEndIdx] ?? '')) {
         codeEndIdx--
       }
 
@@ -974,7 +974,9 @@ function parseUrlAndTitle(
   while (i < text.length && /\s/.test(text[i] ?? '')) i++
   if (text[i] !== ')') return null
 
-  return { url, title, endIndex: i + 1 }
+  return title !== undefined
+    ? { url, title, endIndex: i + 1 }
+    : { url, endIndex: i + 1 }
 }
 
 /**
@@ -1221,8 +1223,8 @@ function collectEmphasisDelimiters(
     const before = delimStart > start ? text[delimStart - 1] : ' '
     const after = i < end ? text[i] : ' '
 
-    const beforeIsWhitespace = /\s/.test(before)
-    const afterIsWhitespace = /\s/.test(after)
+    const beforeIsWhitespace = /\s/.test(before ?? '')
+    const afterIsWhitespace = /\s/.test(after ?? '')
 
     // Can open if not followed by whitespace
     const canOpen = !afterIsWhitespace
@@ -1260,10 +1262,11 @@ function matchEmphasisDelimiters(delimiters: EmphasisDelimiter[]): void {
   // Find all valid opener-closer pairs
   for (let closerIdx = 0; closerIdx < delimiters.length; closerIdx++) {
     const closer = delimiters[closerIdx]
-    if (!closer.canClose) continue
+    if (!closer?.canClose) continue
 
     for (let openerIdx = 0; openerIdx < closerIdx; openerIdx++) {
       const opener = delimiters[openerIdx]
+      if (!opener) continue
 
       if (!opener.canOpen) continue
       if (opener.type !== closer.type) continue
@@ -1297,6 +1300,7 @@ function matchEmphasisDelimiters(delimiters: EmphasisDelimiter[]): void {
   for (const match of potentialMatches) {
     const opener = delimiters[match.openerIdx]
     const closer = delimiters[match.closerIdx]
+    if (!opener || !closer) continue
 
     // Check if still available (might have been consumed by inner match)
     const openerAvailable = opener.count - opener.matched
@@ -1335,7 +1339,8 @@ function buildEmphasisHtml(
   // Find the LEFTMOST opener with matches (earliest position)
   let openerIdx = -1
   for (let i = 0; i < delimiters.length; i++) {
-    if (delimiters[i].canOpen && delimiters[i].matched > 0 && delimiters[i].pairedWith !== undefined) {
+    const delim = delimiters[i]
+    if (delim?.canOpen && delim.matched > 0 && delim.pairedWith !== undefined) {
       openerIdx = i
       break
     }
@@ -1344,13 +1349,14 @@ function buildEmphasisHtml(
   if (openerIdx === -1) return null
 
   const opener = delimiters[openerIdx]
+  if (!opener) return null
 
   // Find its paired closer using the pairedWith field
   const closerIdx = opener.pairedWith
   if (closerIdx === undefined || closerIdx >= delimiters.length) return null
 
   const closer = delimiters[closerIdx]
-  if (!closer.canClose || closer.matched === 0) return null
+  if (!closer?.canClose || closer.matched === 0) return null
 
   // Determine how many delimiters to use for this match
   const matchCount = Math.min(opener.matched, closer.matched, 3)
@@ -1364,7 +1370,7 @@ function buildEmphasisHtml(
   // so they can be processed recursively
   for (let i = openerIdx + 1; i < closerIdx; i++) {
     const innerOpener = delimiters[i]
-    if (innerOpener.canOpen && innerOpener.pairedWith === closerIdx) {
+    if (innerOpener?.canOpen && innerOpener.pairedWith === closerIdx) {
       // This inner opener is paired with our closer
       // We need to include its share of the closing delimiters
       const innerMatchCount = Math.min(innerOpener.matched, closer.matched, 3)
@@ -1678,14 +1684,14 @@ function processInlineSinglePass(
       const decMatch = remaining.match(/^&#(\d+);/)
       const hexMatch = remaining.match(/^&#x([0-9a-fA-F]+);/)
 
-      if (decMatch) {
+      if (decMatch && decMatch[1]) {
         const code = parseInt(decMatch[1], 10)
         parts.push(String.fromCharCode(code))
         i += decMatch[0].length
         continue
       }
 
-      if (hexMatch) {
+      if (hexMatch && hexMatch[1]) {
         const code = parseInt(hexMatch[1], 16)
         parts.push(String.fromCharCode(code))
         i += hexMatch[0].length
@@ -1753,8 +1759,14 @@ function processInlineSinglePass(
 }
 
 function sanitizeHtml(html: string): string {
-  // Remove event handlers
+  // Remove event handlers (with or without quotes)
   html = html.replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, '')
+  html = html.replace(/\s+on\w+\s*=\s*[^\s>"']+/gi, '')
+
+  // Remove javascript: protocol (case-insensitive, with optional leading whitespace)
+  html = html.replace(/(\s+(?:href|src|action|formaction|data)\s*=\s*["'])\s*javascript:/gi, '$1')
+  html = html.replace(/(\s+(?:href|src|action|formaction|data)\s*=\s*)\s*javascript:/gi, '$1')
+
   return html
 }
 
