@@ -376,29 +376,43 @@ function parseBlocks(input: string, opts: Required<MarkdownOptions>, depth: numb
     if (opts.gfm && /\|/.test(line) && i + 1 < lines.length) {
       const nextLine = getLine(lines, i + 1)
       if (nextLine && /^\|?[\s\-:|]+\|?$/.test(nextLine)) {
-        // Split table cells, respecting escaped pipes
+        // Split table cells, respecting escaped pipes - optimized
         const splitTableCells = (row: string): string[] => {
           const cells: string[] = []
           let current = ''
-          let j = 0
-          while (j < row.length) {
-            if (row[j] === '\\' && j + 1 < row.length && row[j + 1] === '|') {
-              // Escaped pipe - keep the pipe as literal
+          let i = 0
+
+          while (i < row.length) {
+            const char = row[i]
+
+            if (char === '\\' && i + 1 < row.length && row[i + 1] === '|') {
+              // Escaped pipe - include the pipe, skip the backslash
               current += '|'
-              j += 2
-            } else if (row[j] === '|') {
+              i += 2
+              continue
+            }
+
+            if (char === '|') {
+              // Cell boundary
               cells.push(current.trim())
               current = ''
-              j++
-            } else {
-              const char = row[j]
-              if (char !== undefined) current += char
-              j++
+              i++
+              continue
             }
+
+            // Regular character
+            current += char
+            i++
           }
+
+          // Push final cell
           cells.push(current.trim())
-          // Filter out empty leading/trailing cells from the split
-          return cells.filter((c, idx) => c || (idx > 0 && idx < cells.length - 1))
+
+          // Filter empty leading/trailing cells
+          const start = cells[0] === '' ? 1 : 0
+          const end = cells[cells.length - 1] === '' ? cells.length - 1 : cells.length
+
+          return cells.slice(start, end)
         }
 
         const headerCells = splitTableCells(line)
@@ -419,14 +433,20 @@ function parseBlocks(input: string, opts: Required<MarkdownOptions>, depth: numb
         })
 
         const rows: string[][] = []
+        const rowStartIdx = i + 2
 
+        // Find end of table first
         i += 2 // skip header and alignment rows
-        while (i < lines.length) {
-          const rowLine = getLine(lines, i)
-          if (!/\|/.test(rowLine)) break
-          const cells = splitTableCells(rowLine)
-          rows.push(cells)
+        while (i < lines.length && /\|/.test(getLine(lines, i))) {
           i++
+        }
+
+        // Extract all table rows in batch
+        for (let idx = rowStartIdx; idx < i; idx++) {
+          const rowLine = getLine(lines, idx)
+          if (/\|/.test(rowLine)) {
+            rows.push(splitTableCells(rowLine))
+          }
         }
 
         blocks.push({
