@@ -519,11 +519,35 @@ function parseList(
   listType: 'ul' | 'ol',
   depth: number = 0
 ): { block: Block; consumed: number } {
+  // Prevent excessive nesting
+  if (depth >= MAX_DEPTH) {
+    return {
+      block: { type: listType, items: [] },
+      consumed: 1
+    }
+  }
+
   const items: ListItem[] = []
   let i = startIndex
   let isLoose = false
   let isTaskList = false
   let startNum = 1
+
+  // Cache line indentation to avoid recalculating
+  const lineIndents = new Map<number, number>()
+
+  const getIndent = (idx: number): number => {
+    if (lineIndents.has(idx)) return lineIndents.get(idx)!
+
+    const line = getLine(lines, idx)
+    let indent = 0
+    for (let i = 0; i < line.length; i++) {
+      if (line[i] === ' ') indent++
+      else break
+    }
+    lineIndents.set(idx, indent)
+    return indent
+  }
 
   // Determine list marker pattern
   const isOrderedList = listType === 'ol'
@@ -567,7 +591,7 @@ function parseList(
           if (i + 1 < lines.length) {
             const afterBlank = getLine(lines, i + 1)
             // If next non-blank line is indented enough, it's continuation
-            const afterIndent = afterBlank.match(/^(\s*)/)?.[1]?.length ?? 0
+            const afterIndent = getIndent(i + 1)
             if (afterIndent >= baseIndent) {
               isLoose = true
               itemLines.push('')
@@ -585,7 +609,7 @@ function parseList(
         }
 
         // Check if line is indented (continuation or nested)
-        const leadingSpaces = nextLine.match(/^(\s*)/)?.[1]?.length ?? 0
+        const leadingSpaces = getIndent(i)
         if (leadingSpaces >= baseIndent) {
           // This is continuation content or nested list
           itemLines.push(nextLine.slice(baseIndent))
