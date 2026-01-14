@@ -410,4 +410,67 @@ describe('Block Elements', () => {
       expect(result).not.toContain('<script>')
     })
   })
+
+  describe('Security: ReDoS prevention', () => {
+    it('handles thematic break with many dashes and spaces quickly', () => {
+      const start = Date.now()
+      // Input designed to trigger catastrophic backtracking in vulnerable regex
+      const malicious = '- '.repeat(30) // 60 characters
+      const result = markdown(malicious)
+      const elapsed = Date.now() - start
+
+      // Must complete in reasonable time (< 100ms)
+      expect(elapsed).toBeLessThan(100)
+      expect(typeof result).toBe('string')
+    })
+
+    it('handles thematic break with many asterisks and spaces quickly', () => {
+      const start = Date.now()
+      const malicious = '* '.repeat(30)
+      const result = markdown(malicious)
+      const elapsed = Date.now() - start
+
+      expect(elapsed).toBeLessThan(100)
+      expect(typeof result).toBe('string')
+    })
+
+    it('handles thematic break with many underscores and spaces quickly', () => {
+      const start = Date.now()
+      const malicious = '_ '.repeat(30)
+      const result = markdown(malicious)
+      const elapsed = Date.now() - start
+
+      expect(elapsed).toBeLessThan(100)
+      expect(typeof result).toBe('string')
+    })
+
+    it('handles pathological thematic break pattern quickly', () => {
+      const start = Date.now()
+      // Mix of valid thematic break characters with spaces
+      const malicious = '-  '.repeat(50) + '-'
+      const result = markdown(malicious)
+      const elapsed = Date.now() - start
+
+      expect(elapsed).toBeLessThan(100)
+      expect(typeof result).toBe('string')
+    })
+
+    it('correctly identifies valid thematic breaks', () => {
+      // Ensure fix doesn't break valid thematic breaks
+      expect(markdown('---')).toContain('<hr')
+      expect(markdown('***')).toContain('<hr')
+      expect(markdown('___')).toContain('<hr')
+      expect(markdown('- - -')).toContain('<hr')
+      expect(markdown('* * *')).toContain('<hr')
+      expect(markdown('_ _ _')).toContain('<hr')
+      expect(markdown('-  -  -')).toContain('<hr')
+    })
+
+    it('correctly rejects invalid thematic breaks', () => {
+      // Ensure fix doesn't break validation
+      expect(markdown('--')).not.toContain('<hr')
+      expect(markdown('- -')).not.toContain('<hr')
+      expect(markdown('*-*')).not.toContain('<hr') // mixed characters
+    })
+  })
 })

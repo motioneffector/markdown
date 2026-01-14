@@ -239,7 +239,7 @@ function parseBlocks(
 
         // Check for level 2 underline (---)
         const firstHeadingLine = headingStartIdx !== -1 ? lines[headingStartIdx] : ''
-        const isThematicBreak = firstHeadingLine && /^(?:(?:-\s*){3,}|(?:\*\s*){3,}|(?:_\s*){3,})$/.test(firstHeadingLine)
+        const isThematicBreak = firstHeadingLine && /^(?:-[\s-]*-[\s-]*-[\s-]*|[*][\s*]*[*][\s*]*[*][\s*]*|_[\s_]*_[\s_]*_[\s_]*)$/.test(firstHeadingLine)
 
         if (/^-+\s*$/.test(currentLine) && headingStartIdx !== -1 && j > headingStartIdx &&
             firstHeadingLine && !/^[*\-+]\s/.test(firstHeadingLine) && !/^\d+\.\s/.test(firstHeadingLine) && !isThematicBreak) {
@@ -383,7 +383,8 @@ function parseBlocks(
     }
 
     // Thematic break: ---, ***, ___
-    if (/^(?:(?:-\s*){3,}|(?:\*\s*){3,}|(?:_\s*){3,})$/.test(line)) {
+    // Fixed ReDoS: avoid nested quantifiers by explicitly matching pattern
+    if (/^(?:-[\s-]*-[\s-]*-[\s-]*|[*][\s*]*[*][\s*]*[*][\s*]*|_[\s_]*_[\s_]*_[\s_]*)$/.test(line)) {
       blocks.push({ type: 'hr' })
       i++
       continue
@@ -568,7 +569,7 @@ function isBlockStart(line: string, opts: Required<MarkdownOptions>): boolean {
     /^[*\-+]\s/.test(line) || // ul
     /^\d+\.\s/.test(line) || // ol
     line.startsWith('> ') || // blockquote
-    /^(?:(?:-\s*){3,}|(?:\*\s*){3,}|(?:_\s*){3,})$/.test(line) || // hr
+    /^(?:-[\s-]*-[\s-]*-[\s-]*|[*][\s*]*[*][\s*]*[*][\s*]*|_[\s_]*_[\s_]*_[\s_]*)$/.test(line) || // hr (fixed ReDoS)
     (opts.gfm && /\|/.test(line)) // table
   )
 }
