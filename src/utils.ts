@@ -3,7 +3,8 @@
  */
 
 /**
- * Escape HTML special characters
+ * Escape HTML special characters for attribute values
+ * Encodes: & < > " '
  */
 export function escapeHtml(text: string): string {
   return text
@@ -12,6 +13,19 @@ export function escapeHtml(text: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
+}
+
+/**
+ * Escape HTML special characters for text content per CommonMark
+ * Encodes: & < > "
+ * Does NOT encode apostrophes (') per CommonMark spec
+ */
+export function escapeHtmlText(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
 }
 
 /**

@@ -1,5 +1,5 @@
 import type { MarkdownOptions } from './types'
-import { escapeHtml, sanitizeUrl, isBlankLine } from './utils'
+import { escapeHtml, escapeHtmlText, sanitizeUrl, isBlankLine } from './utils'
 
 // Maximum nesting depth to prevent stack overflow and OOM
 const MAX_DEPTH = 32
@@ -1524,7 +1524,7 @@ function processInlineSinglePass(
 
     // 1. ESCAPES
     if (char === '\\' && i + 1 < text.length && isEscapable(next ?? '')) {
-      parts.push(next ?? '')
+      parts.push(escapeHtmlText(next ?? ''))
       i += 2
       continue
     }

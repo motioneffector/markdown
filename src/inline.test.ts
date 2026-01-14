@@ -211,7 +211,8 @@ describe('Inline Elements', () => {
   describe('Backslash escapes - extended ASCII punctuation', () => {
     it('escapes double quote', () => {
       const result = markdown('foo \\"bar\\"')
-      expect(result).toBe('<p>foo "bar"</p>')
+      // CommonMark expects entity encoding for quotes
+      expect(result).toBe('<p>foo &quot;bar&quot;</p>')
     })
 
     it('escapes dollar sign', () => {
@@ -231,7 +232,8 @@ describe('Inline Elements', () => {
 
     it('escapes apostrophe', () => {
       const result = markdown("don\\'t")
-      expect(result).toContain("'")
+      // CommonMark expects literal apostrophes in text content
+      expect(result).toBe("<p>don't</p>")
     })
 
     it('escapes forward slash', () => {
@@ -283,20 +285,22 @@ describe('Inline Elements', () => {
     it('escapes all new ASCII punctuation together', () => {
       const input = '\\"\\ \\$\\%\\&\\\'\\,\\/\\:\\;\\<\\=\\>\\?\\@\\^'
       const result = markdown(input)
-      // Should contain unescaped versions of all these characters
-      expect(result).toContain('"')
-      expect(result).toContain('$')
-      expect(result).toContain('%')
-      expect(result).toContain('&')
-      expect(result).toContain("'")
-      expect(result).toContain(',')
-      expect(result).toContain('/')
-      expect(result).toContain(':')
-      expect(result).toContain(';')
-      expect(result).toContain('=')
-      expect(result).toContain('?')
-      expect(result).toContain('@')
-      expect(result).toContain('^')
+      // CommonMark: Some chars get entity-encoded, others stay literal
+      expect(result).toContain('&quot;')  // " → &quot;
+      expect(result).toContain('$')       // $ stays literal
+      expect(result).toContain('%')       // % stays literal
+      expect(result).toContain('&amp;')   // & → &amp;
+      expect(result).toContain("'")       // ' stays literal (per CommonMark)
+      expect(result).toContain(',')       // , stays literal
+      expect(result).toContain('/')       // / stays literal
+      expect(result).toContain(':')       // : stays literal
+      expect(result).toContain(';')       // ; stays literal
+      expect(result).toContain('&lt;')    // < → &lt;
+      expect(result).toContain('=')       // = stays literal
+      expect(result).toContain('&gt;')    // > → &gt;
+      expect(result).toContain('?')       // ? stays literal
+      expect(result).toContain('@')       // @ stays literal
+      expect(result).toContain('^')       // ^ stays literal
     })
   })
 
