@@ -1,0 +1,1793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>@motioneffector/markdown - Demo</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f9f9f9;
+    }
+    h1 {
+      color: #333;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 10px;
+    }
+    section {
+      margin: 20px 0;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    section h2 {
+      margin-top: 0;
+      color: #555;
+    }
+    .test-pass {
+      color: green;
+    }
+    .test-fail {
+      color: red;
+      font-weight: bold;
+    }
+    .test-output {
+      background: #f5f5f5;
+      padding: 15px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    button {
+      padding: 8px 16px;
+      margin: 4px;
+      cursor: pointer;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .run-all {
+      background: #4CAF50;
+      color: white;
+      font-size: 16px;
+      padding: 12px 24px;
+    }
+    .run-all:hover {
+      background: #45a049;
+    }
+    button:not(.run-all) {
+      background: #ddd;
+      color: #333;
+    }
+    button:not(.run-all):hover {
+      background: #ccc;
+    }
+    .summary {
+      font-size: 18px;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 100px;
+      font-family: monospace;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      resize: vertical;
+    }
+    .output {
+      margin-top: 10px;
+      padding: 15px;
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      min-height: 50px;
+    }
+    .controls {
+      margin: 10px 0;
+    }
+    label {
+      display: block;
+      margin: 5px 0;
+    }
+    input[type="checkbox"] {
+      margin-right: 5px;
+    }
+    input[type="text"] {
+      padding: 5px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-left: 10px;
+    }
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    code {
+      background: #f0f0f0;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  <h1>@motioneffector/markdown Demo</h1>
+
+  <section id="test-runner">
+    <h2>Automated Tests</h2>
+    <button class="run-all" onclick="runAllTests()">Run All Tests</button>
+    <button onclick="clearResults()">Clear Results</button>
+    <div class="summary" id="summary"></div>
+    <div class="test-output" id="test-output"></div>
+  </section>
+
+  <section>
+    <h2>Interactive: Basic Markdown</h2>
+    <p>Try rendering markdown manually:</p>
+    <textarea id="markdown-input" placeholder="Enter markdown here...">**Hello World!**
+
+This is a *test* of the markdown parser.
+
+- List item 1
+- List item 2
+- List item 3</textarea>
+    <div class="controls">
+      <label><input type="checkbox" id="opt-gfm" checked> Enable GFM</label>
+      <label><input type="checkbox" id="opt-sanitize" checked> Sanitize URLs</label>
+      <label><input type="checkbox" id="opt-breaks"> Convert line breaks to &lt;br&gt;</label>
+      <label>Link target: <input type="text" id="opt-target" placeholder="_blank"></label>
+    </div>
+    <button onclick="renderMarkdown()">Render</button>
+    <div class="output" id="markdown-output"></div>
+  </section>
+
+  <section>
+    <h2>Interactive: HTML Stripping</h2>
+    <p>Test the markdownStrip function with different presets:</p>
+    <textarea id="strip-input" placeholder="Enter HTML or markdown..."><p>This is <strong>bold</strong> and <em>italic</em> text with a <a href="#">link</a>.</p></textarea>
+    <div class="controls">
+      <label>
+        Preset:
+        <select id="strip-preset">
+          <option value="none">None (allow all)</option>
+          <option value="plaintext">plaintext</option>
+          <option value="inline">inline</option>
+          <option value="safe">safe</option>
+          <option value="prose">prose</option>
+        </select>
+      </label>
+    </div>
+    <button onclick="renderStrip()">Strip Tags</button>
+    <div class="output" id="strip-output"></div>
+  </section>
+
+  <script>
+    // ============================================
+    // INLINED LIBRARY CODE
+    // ============================================
+
+    // utils.js
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function escapeHtmlText(text) {
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function sanitizeUrl(url) {
+      const lower = url.toLowerCase().trim();
+      if (lower.startsWith('javascript:') ||
+          lower.startsWith('vbscript:') ||
+          lower.startsWith('file:') ||
+          (lower.startsWith('data:') && !lower.startsWith('data:image/'))) {
+        return '';
+      }
+      return url;
+    }
+
+    function isBlankLine(line) {
+      return /^\s*$/.test(line);
+    }
+
+    // errors.js
+    class MarkdownError extends Error {
+      constructor(message) {
+        super(message);
+        this.name = 'MarkdownError';
+      }
+    }
+
+    class ValidationError extends MarkdownError {
+      constructor(message, field) {
+        super(message);
+        this.field = field;
+        this.name = 'ValidationError';
+      }
+    }
+
+    class ParseError extends MarkdownError {
+      constructor(message, position, input) {
+        super(message);
+        this.position = position;
+        this.input = input;
+        this.name = 'ParseError';
+      }
+    }
+
+    // Inline the full markdown.js content here
+    const MAX_DEPTH = 32;
+    const GFM_URL_PUNCTUATION = /[.,;:!?)\]]+$/;
+    const GFM_EMAIL_PATTERN = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+
+    function getLine(lines, index) {
+      return lines[index] ?? '';
+    }
+
+    function expandTabs(text) {
+      let result = '';
+      let column = 0;
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (char === '\t') {
+          const spacesToAdd = 4 - (column % 4);
+          result += ' '.repeat(spacesToAdd);
+          column += spacesToAdd;
+        } else if (char === '\n') {
+          result += char;
+          column = 0;
+        } else {
+          result += char;
+          column++;
+        }
+      }
+      return result;
+    }
+
+    function extractLinkDefinitions(input) {
+      const definitions = new Map();
+      const lines = input.split('\n');
+      const outputLines = [];
+      let i = 0;
+      while (i < lines.length) {
+        const line = lines[i];
+        if (!line) {
+          outputLines.push(line ?? '');
+          i++;
+          continue;
+        }
+        const match = line.match(/^\[([^\]]+)\]:\s*(\S+)(?:\s+"([^"]+)")?$/);
+        if (match?.[1] && match[2]) {
+          const ref = match[1].toLowerCase();
+          const url = match[2];
+          const title = match[3];
+          if (title) {
+            definitions.set(ref, { url, title });
+          } else {
+            definitions.set(ref, { url });
+          }
+          i++;
+          continue;
+        }
+        outputLines.push(line);
+        i++;
+      }
+      return { text: outputLines.join('\n'), definitions };
+    }
+
+    function isBlockStart(line, opts) {
+      return (
+        /^#{1,6}\s/.test(line) ||
+        /^[`~]{3,}/.test(line) ||
+        /^[*\-+]\s/.test(line) ||
+        /^\d+\.\s/.test(line) ||
+        line.startsWith('> ') ||
+        /^(?:(?:-\s*){3,}|(?:\*\s*){3,}|(?:_\s*){3,})$/.test(line) ||
+        (opts.gfm && /\|/.test(line))
+      );
+    }
+
+    function parseBlocks(input, opts, depth = 0, originalLines) {
+      if (depth >= MAX_DEPTH) {
+        return [{ type: 'paragraph', text: input }];
+      }
+
+      const lines = [];
+      let pos = 0;
+      while (pos < input.length) {
+        const nextNewline = input.indexOf('\n', pos);
+        if (nextNewline === -1) {
+          lines.push(input.slice(pos));
+          break;
+        } else {
+          lines.push(input.slice(pos, nextNewline));
+          pos = nextNewline + 1;
+        }
+      }
+
+      const blocks = [];
+      let i = 0;
+
+      while (i < lines.length) {
+        const line = lines[i];
+        if (!line) {
+          i++;
+          continue;
+        }
+        if (isBlankLine(line)) {
+          i++;
+          continue;
+        }
+
+        // Setext headings
+        {
+          let foundSetextHeading = false;
+          let j = i;
+          let headingStartIdx = -1;
+          while (j < lines.length) {
+            const currentLine = lines[j];
+            if (!currentLine || isBlankLine(currentLine)) break;
+            if (headingStartIdx === -1) headingStartIdx = j;
+
+            if (/^=+\s*$/.test(currentLine) && headingStartIdx !== -1 && j > headingStartIdx) {
+              const headingText = lines.slice(headingStartIdx, j).join('\n').trim();
+              blocks.push({ type: 'heading', level: 1, text: headingText });
+              i = j + 1;
+              foundSetextHeading = true;
+              break;
+            }
+
+            const firstHeadingLine = headingStartIdx !== -1 ? lines[headingStartIdx] : '';
+            const isThematicBreak = firstHeadingLine && /^(?:(?:-\s*){3,}|(?:\*\s*){3,}|(?:_\s*){3,})$/.test(firstHeadingLine);
+            if (/^-+\s*$/.test(currentLine) && headingStartIdx !== -1 && j > headingStartIdx &&
+                firstHeadingLine && !/^[*\-+]\s/.test(firstHeadingLine) && !/^\d+\.\s/.test(firstHeadingLine) && !isThematicBreak) {
+              const headingText = lines.slice(headingStartIdx, j).join('\n').trim();
+              blocks.push({ type: 'heading', level: 2, text: headingText });
+              i = j + 1;
+              foundSetextHeading = true;
+              break;
+            }
+            j++;
+          }
+          if (foundSetextHeading) continue;
+        }
+
+        // ATX headings
+        const headingMatch = line.match(/^(#{1,6})\s+(.+?)(?:\s+#+\s*)?$/);
+        if (headingMatch?.[1] && headingMatch[2]) {
+          blocks.push({ type: 'heading', level: headingMatch[1].length, text: headingMatch[2] });
+          i++;
+          continue;
+        }
+
+        // Indented code blocks
+        if (/^ {4}/.test(line)) {
+          const codeStartIdx = i;
+          let codeEndIdx = i;
+          while (i < lines.length) {
+            const currentLine = lines[i];
+            if (!currentLine) {
+              i++;
+              continue;
+            }
+            if (!/^ {4}/.test(currentLine) && !isBlankLine(currentLine)) {
+              break;
+            }
+            codeEndIdx = i;
+            i++;
+          }
+          while (codeEndIdx > codeStartIdx && isBlankLine(lines[codeEndIdx])) {
+            codeEndIdx--;
+          }
+          const codeLines = [];
+          for (let idx = codeStartIdx; idx <= codeEndIdx; idx++) {
+            const codeLine = lines[idx];
+            if (codeLine && /^ {4}/.test(codeLine)) {
+              codeLines.push(codeLine.slice(4));
+            } else {
+              codeLines.push('');
+            }
+          }
+          blocks.push({ type: 'code', language: '', code: codeLines.join('\n') });
+          continue;
+        }
+
+        // Fenced code blocks
+        const fenceMatch = line.match(/^(`{3,}|~{3,})(.*)$/);
+        if (fenceMatch?.[1] && fenceMatch[2] !== undefined) {
+          const fence = fenceMatch[1];
+          const fenceChar = fence[0];
+          const fenceLen = fence.length;
+          const language = fenceMatch[2].trim();
+          const codeStartIdx = i + 1;
+          let codeEndIdx = i + 1;
+          i++;
+          while (i < lines.length) {
+            const codeLine = getLine(lines, i);
+            if (fenceChar && codeLine.startsWith(fenceChar.repeat(fenceLen))) {
+              codeEndIdx = i - 1;
+              break;
+            }
+            codeEndIdx = i;
+            i++;
+          }
+          const codeContent = lines.slice(codeStartIdx, codeEndIdx + 1).join('\n');
+          blocks.push({ type: 'code', language, code: codeContent });
+          i++;
+          continue;
+        }
+
+        // Thematic break
+        if (/^(?:(?:-\s*){3,}|(?:\*\s*){3,}|(?:_\s*){3,})$/.test(line)) {
+          blocks.push({ type: 'hr' });
+          i++;
+          continue;
+        }
+
+        // Unordered list
+        if (/^[*\-+]\s/.test(line)) {
+          const { block: listBlock, consumed } = parseList(lines, i, opts, 'ul', depth + 1);
+          blocks.push(listBlock);
+          i += consumed;
+          continue;
+        }
+
+        // Ordered list
+        if (/^\d+\.\s/.test(line)) {
+          const { block: listBlock, consumed } = parseList(lines, i, opts, 'ol', depth + 1);
+          blocks.push(listBlock);
+          i += consumed;
+          continue;
+        }
+
+        // Blockquote
+        if (line.startsWith('> ')) {
+          const quoteLines = [];
+          while (i < lines.length) {
+            const quoteLine = getLine(lines, i);
+            if (quoteLine.startsWith('> ') || quoteLine.startsWith('>')) {
+              quoteLines.push(quoteLine.replace(/^>\s?/, ''));
+              i++;
+              continue;
+            }
+            if (isBlankLine(quoteLine)) break;
+            if (/^ {4}/.test(quoteLine)) break;
+            if (isBlockStart(quoteLine, opts)) break;
+            quoteLines.push(quoteLine);
+            i++;
+          }
+          const quoteContent = quoteLines.join('\n');
+          blocks.push({ type: 'blockquote', content: quoteContent });
+          continue;
+        }
+
+        // GFM Table
+        if (opts.gfm && /\|/.test(line) && i + 1 < lines.length) {
+          const nextLine = getLine(lines, i + 1);
+          if (nextLine && /^\|?[\s\-:|]+\|?$/.test(nextLine)) {
+            const splitTableCells = (row) => {
+              const cells = [];
+              let current = '';
+              let j = 0;
+              while (j < row.length) {
+                const char = row[j];
+                if (char === '\\' && j + 1 < row.length && row[j + 1] === '|') {
+                  current += '|';
+                  j += 2;
+                  continue;
+                }
+                if (char === '|') {
+                  cells.push(current.trim());
+                  current = '';
+                  j++;
+                  continue;
+                }
+                current += char;
+                j++;
+              }
+              cells.push(current.trim());
+              const start = cells[0] === '' ? 1 : 0;
+              const end = cells[cells.length - 1] === '' ? cells.length - 1 : cells.length;
+              return cells.slice(start, end);
+            };
+
+            const headerCells = splitTableCells(line);
+            const alignCells = nextLine.split('|').filter(c => c.trim()).map(c => c.trim());
+            const alignments = alignCells.map((cell) => {
+              const left = cell.startsWith(':');
+              const right = cell.endsWith(':');
+              if (left && right) return 'center';
+              if (right) return 'right';
+              if (left) return 'left';
+              return null;
+            });
+
+            const rows = [];
+            i += 2;
+            while (i < lines.length && /\|/.test(getLine(lines, i))) {
+              const rowLine = getLine(lines, i);
+              rows.push(splitTableCells(rowLine));
+              i++;
+            }
+
+            blocks.push({ type: 'table', header: headerCells, alignments, rows });
+            continue;
+          }
+        }
+
+        // Paragraph
+        const paraLines = [];
+        while (i < lines.length) {
+          const paraLine = getLine(lines, i);
+          if (isBlankLine(paraLine) || isBlockStart(paraLine, opts)) break;
+          paraLines.push(paraLine);
+          i++;
+        }
+        if (paraLines.length > 0) {
+          blocks.push({ type: 'paragraph', text: paraLines.join('\n') });
+        } else {
+          const currentLine = getLine(lines, i);
+          if (currentLine && !isBlankLine(currentLine)) {
+            blocks.push({ type: 'paragraph', text: currentLine });
+          }
+          i++;
+        }
+      }
+      return blocks;
+    }
+
+    function parseList(lines, startIndex, opts, listType, depth = 0) {
+      if (depth >= MAX_DEPTH) {
+        return { block: { type: listType, items: [] }, consumed: 1 };
+      }
+
+      const items = [];
+      let i = startIndex;
+      let isLoose = false;
+      let isTaskList = false;
+      let startNum = 1;
+
+      const isOrderedList = listType === 'ol';
+      const listMarkerRegex = isOrderedList ? /^(\d+)\.\s(.*)$/ : /^[*\-+]\s(.*)$/;
+      const baseIndent = isOrderedList ? 3 : 2;
+
+      while (i < lines.length) {
+        const line = getLine(lines, i);
+        const match = line.match(listMarkerRegex);
+        if (match && (isOrderedList ? match[2] !== undefined : match[1] !== undefined)) {
+          let itemText = isOrderedList ? (match[2] ?? '') : (match[1] ?? '');
+          if (isOrderedList && items.length === 0 && match[1]) {
+            startNum = parseInt(match[1], 10);
+          }
+
+          const taskMatch = itemText.match(/^\[([ xX])\]\s(.*)$/);
+          let checked;
+          if (taskMatch?.[1] && taskMatch[2]) {
+            isTaskList = true;
+            checked = taskMatch[1].toLowerCase() === 'x';
+            itemText = taskMatch[2];
+          }
+
+          const itemLines = [itemText];
+          i++;
+
+          while (i < lines.length) {
+            const nextLine = getLine(lines, i);
+            if (isBlankLine(nextLine)) {
+              if (i + 1 < lines.length) {
+                const afterBlank = getLine(lines, i + 1);
+                const afterIndent = afterBlank.split('').findIndex(c => c !== ' ');
+                if (afterIndent >= baseIndent) {
+                  isLoose = true;
+                  itemLines.push('');
+                  i++;
+                  continue;
+                }
+                if (listMarkerRegex.test(afterBlank)) {
+                  isLoose = true;
+                  i++;
+                  break;
+                }
+              }
+              break;
+            }
+
+            let leadingSpaces = 0;
+            for (let j = 0; j < nextLine.length && nextLine[j] === ' '; j++) leadingSpaces++;
+            if (leadingSpaces >= baseIndent) {
+              itemLines.push(nextLine.slice(baseIndent));
+              i++;
+              continue;
+            }
+            if (listMarkerRegex.test(nextLine)) break;
+            break;
+          }
+
+          const nestedContent = itemLines.join('\n');
+          let nestedBlocks = [];
+          if (nestedContent.trim() && depth < MAX_DEPTH) {
+            nestedBlocks = parseBlocks(nestedContent, opts, depth + 1, undefined);
+          }
+
+          items.push({
+            content: nestedContent,
+            children: nestedBlocks,
+            ...(checked !== undefined && { checked }),
+          });
+          continue;
+        }
+        break;
+      }
+
+      const consumed = Math.max(1, i - startIndex);
+      return {
+        block: { type: listType, items, start: startNum, isLoose, isTaskList },
+        consumed,
+      };
+    }
+
+    function markdownInternal(input, opts, definitions, depth) {
+      if (input === '' || depth >= MAX_DEPTH) {
+        return depth >= MAX_DEPTH ? `<p>${escapeHtml(input)}</p>` : '';
+      }
+      const blocks = parseBlocks(input, opts, depth, undefined);
+      return blocks.map(block => renderBlock(block, opts, definitions, depth)).join('\n');
+    }
+
+    function renderBlock(block, opts, definitions = new Map(), depth = 0) {
+      switch (block.type) {
+        case 'heading': {
+          const level = block.level;
+          const text = block.text;
+          if (typeof level !== 'number' || typeof text !== 'string') return '';
+          return `<h${level}>${processInlineSinglePass(text, opts, definitions)}</h${level}>`;
+        }
+        case 'paragraph': {
+          const text = block.text;
+          if (typeof text !== 'string') return '';
+          return `<p>${processInlineSinglePass(text.trim(), opts, definitions)}</p>`;
+        }
+        case 'code': {
+          const language = block.language;
+          const code = block.code;
+          if (typeof code !== 'string') return '';
+          const lang = typeof language === 'string' ? language : '';
+          const className = lang ? ` class="language-${lang}"` : '';
+          return `<pre><code${className}>${escapeHtml(code)}</code></pre>`;
+        }
+        case 'hr':
+          return '<hr />';
+        case 'ul': {
+          const isLoose = Boolean(block.isLoose);
+          const items = Array.isArray(block.items) ? block.items.map(item => {
+            let content;
+            if (item.children?.length) {
+              const childHtml = item.children.map(child => renderBlock(child, opts, definitions)).join('\n');
+              if (isLoose) {
+                content = childHtml;
+              } else {
+                const firstChild = item.children[0];
+                if (item.children.length === 1 && firstChild?.type === 'paragraph') {
+                  const paragraphText = firstChild.text;
+                  content = typeof paragraphText === 'string' ? processInlineSinglePass(paragraphText, opts, definitions) : childHtml;
+                } else {
+                  content = childHtml;
+                }
+              }
+            } else {
+              content = processInlineSinglePass(item.content, opts, definitions);
+            }
+            if (item.checked !== undefined) {
+              const checkedAttr = item.checked ? ' checked' : '';
+              const checkbox = `<input type="checkbox" disabled${checkedAttr} />`;
+              content = `${checkbox} ${content}`;
+            }
+            const className = item.checked !== undefined ? ' class="task-list-item"' : '';
+            return `<li${className}>${content}</li>`;
+          }) : [];
+          return `<ul>\n${items.join('\n')}\n</ul>`;
+        }
+        case 'ol': {
+          const isLoose = Boolean(block.isLoose);
+          const start = typeof block.start === 'number' ? block.start : 1;
+          const startAttr = start !== 1 ? ` start="${start}"` : '';
+          const items = Array.isArray(block.items) ? block.items.map(item => {
+            let content;
+            if (item.children?.length) {
+              const childHtml = item.children.map(child => renderBlock(child, opts, definitions)).join('\n');
+              if (isLoose) {
+                content = childHtml;
+              } else {
+                const firstChild = item.children[0];
+                if (item.children.length === 1 && firstChild?.type === 'paragraph') {
+                  const paragraphText = firstChild.text;
+                  content = typeof paragraphText === 'string' ? processInlineSinglePass(paragraphText, opts, definitions) : childHtml;
+                } else {
+                  content = childHtml;
+                }
+              }
+            } else {
+              content = processInlineSinglePass(item.content, opts, definitions);
+            }
+            return `<li>${content}</li>`;
+          }) : [];
+          return `<ol${startAttr}>\n${items.join('\n')}\n</ol>`;
+        }
+        case 'blockquote': {
+          const content = block.content;
+          if (typeof content !== 'string') return '';
+          if (depth >= MAX_DEPTH) {
+            return `<blockquote>\n<p>${escapeHtml(content)}</p>\n</blockquote>`;
+          }
+          return `<blockquote>\n${markdownInternal(content, opts, definitions, depth + 1)}\n</blockquote>`;
+        }
+        case 'table': {
+          const alignments = Array.isArray(block.alignments) ? block.alignments : [];
+          const headerCells = Array.isArray(block.header) ? block.header : [];
+          const header = headerCells
+            .map((cell, i) => {
+              const align = alignments[i];
+              const alignStr = typeof align === 'string' ? align : null;
+              const style = alignStr ? ` style="text-align: ${alignStr}"` : '';
+              return `<th${style}>${processInlineSinglePass(cell, opts, definitions)}</th>`;
+            })
+            .join('');
+          const rowsData = Array.isArray(block.rows) ? block.rows : [];
+          const rows = rowsData
+            .map(row => {
+              const cells = row
+                .map((cell, i) => {
+                  const align = alignments[i];
+                  const alignStr = typeof align === 'string' ? align : null;
+                  const style = alignStr ? ` style="text-align: ${alignStr}"` : '';
+                  return `<td${style}>${processInlineSinglePass(cell, opts, definitions)}</td>`;
+                })
+                .join('');
+              return `<tr>${cells}</tr>`;
+            })
+            .join('\n');
+          return `<table>\n<thead>\n<tr>${header}</tr>\n</thead>\n<tbody>\n${rows}\n</tbody>\n</table>`;
+        }
+        default:
+          return '';
+      }
+    }
+
+    function isEscapable(char) {
+      return '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'.includes(char);
+    }
+
+    function findClosingBracket(text, start) {
+      if (text[start] !== '[') return -1;
+      let depth = 1;
+      for (let i = start + 1; i < text.length; i++) {
+        if (text[i] === '\\' && i + 1 < text.length) {
+          i++;
+          continue;
+        }
+        if (text[i] === '[') depth++;
+        else if (text[i] === ']') depth--;
+        if (depth === 0) return i;
+      }
+      return -1;
+    }
+
+    function parseUrlAndTitle(text, start) {
+      if (text[start] !== '(') return null;
+      let i = start + 1;
+      while (i < text.length && /\s/.test(text[i] ?? '')) i++;
+
+      let url;
+      if (text[i] === '<') {
+        const closeAngle = text.indexOf('>', i);
+        if (closeAngle === -1) return null;
+        url = text.slice(i + 1, closeAngle);
+        i = closeAngle + 1;
+      } else {
+        const urlStart = i;
+        let parenDepth = 0;
+        while (i < text.length) {
+          const c = text[i];
+          if (c === '(') parenDepth++;
+          else if (c === ')') {
+            if (parenDepth === 0) break;
+            parenDepth--;
+          } else if (/\s/.test(c ?? '') && parenDepth === 0) break;
+          i++;
+        }
+        url = text.slice(urlStart, i);
+      }
+
+      while (i < text.length && /\s/.test(text[i] ?? '')) i++;
+
+      let title;
+      if (text[i] === '"' || text[i] === "'") {
+        const quote = text[i];
+        const titleStart = i + 1;
+        const titleEnd = text.indexOf(quote ?? '', titleStart);
+        if (titleEnd !== -1) {
+          title = text.slice(titleStart, titleEnd);
+          i = titleEnd + 1;
+        }
+      }
+
+      while (i < text.length && /\s/.test(text[i] ?? '')) i++;
+      if (text[i] !== ')') return null;
+      return { url, title, endIndex: i + 1 };
+    }
+
+    function parseCodeSpan(text, start) {
+      let backticks = 0;
+      let i = start;
+      while (i < text.length && text[i] === '`') {
+        backticks++;
+        i++;
+      }
+      if (backticks === 0) return null;
+
+      const closePattern = '`'.repeat(backticks);
+      const closeIndex = text.indexOf(closePattern, i);
+      if (closeIndex === -1) return null;
+
+      const afterClose = closeIndex + backticks;
+      if (afterClose < text.length && text[afterClose] === '`') return null;
+
+      let code = text.slice(i, closeIndex);
+      if (code.startsWith(' ') && code.endsWith(' ') && code.length > 2) {
+        code = code.slice(1, -1);
+      }
+      return { html: `<code>${escapeHtml(code)}</code>`, endIndex: closeIndex + backticks };
+    }
+
+    function parseImageSinglePass(text, start, opts, definitions) {
+      if (text[start] !== '!' || text[start + 1] !== '[') return null;
+      const altEnd = findClosingBracket(text, start + 1);
+      if (altEnd === -1) return null;
+      const alt = text.slice(start + 2, altEnd);
+
+      if (text[altEnd + 1] === '(') {
+        const result = parseUrlAndTitle(text, altEnd + 1);
+        if (!result) return null;
+        const safeSrc = opts.sanitize ? sanitizeUrl(result.url.trim()) : result.url.trim();
+        if (!safeSrc) return null;
+        const titleAttr = result.title ? ` title="${escapeHtml(result.title)}"` : '';
+        return {
+          html: `<img src="${escapeHtml(safeSrc)}" alt="${escapeHtml(alt)}"${titleAttr} />`,
+          endIndex: result.endIndex,
+        };
+      }
+
+      if (text[altEnd + 1] === '[') {
+        const refEnd = findClosingBracket(text, altEnd + 1);
+        if (refEnd === -1) return null;
+        const ref = text.slice(altEnd + 2, refEnd) || alt;
+        const def = definitions.get(ref.toLowerCase());
+        if (!def) return null;
+        const safeSrc = opts.sanitize ? sanitizeUrl(def.url.trim()) : def.url.trim();
+        if (!safeSrc) return null;
+        const titleAttr = def.title ? ` title="${escapeHtml(def.title)}"` : '';
+        return {
+          html: `<img src="${escapeHtml(safeSrc)}" alt="${escapeHtml(alt)}"${titleAttr} />`,
+          endIndex: refEnd + 1,
+        };
+      }
+      return null;
+    }
+
+    function parseLinkSinglePass(text, start, opts, definitions) {
+      if (text[start] !== '[') return null;
+      const textEnd = findClosingBracket(text, start);
+      if (textEnd === -1) return null;
+      const linkText = text.slice(start + 1, textEnd);
+      const target = opts.linkTarget ? ` target="${opts.linkTarget}"` : '';
+
+      if (text[textEnd + 1] === '(') {
+        const result = parseUrlAndTitle(text, textEnd + 1);
+        if (!result) return null;
+        const safeUrl = opts.sanitize ? sanitizeUrl(result.url.trim()) : result.url.trim();
+        if (!safeUrl) return { html: linkText, endIndex: result.endIndex };
+        const titleAttr = result.title ? ` title="${escapeHtml(result.title)}"` : '';
+        return {
+          html: `<a href="${escapeHtml(safeUrl)}"${target}${titleAttr}>${linkText}</a>`,
+          endIndex: result.endIndex,
+        };
+      }
+
+      if (text[textEnd + 1] === '[') {
+        const refEnd = findClosingBracket(text, textEnd + 1);
+        if (refEnd === -1) return null;
+        const ref = text.slice(textEnd + 2, refEnd) || linkText;
+        const def = definitions.get(ref.toLowerCase());
+        if (!def) return null;
+        const safeUrl = opts.sanitize ? sanitizeUrl(def.url.trim()) : def.url.trim();
+        if (!safeUrl) return { html: linkText, endIndex: refEnd + 1 };
+        const titleAttr = def.title ? ` title="${escapeHtml(def.title)}"` : '';
+        return {
+          html: `<a href="${escapeHtml(safeUrl)}"${target}${titleAttr}>${linkText}</a>`,
+          endIndex: refEnd + 1,
+        };
+      }
+
+      const def = definitions.get(linkText.toLowerCase());
+      if (def) {
+        const safeUrl = opts.sanitize ? sanitizeUrl(def.url.trim()) : def.url.trim();
+        if (safeUrl) {
+          const titleAttr = def.title ? ` title="${escapeHtml(def.title)}"` : '';
+          return {
+            html: `<a href="${escapeHtml(safeUrl)}"${target}${titleAttr}>${linkText}</a>`,
+            endIndex: textEnd + 1,
+          };
+        }
+        return { html: linkText, endIndex: textEnd + 1 };
+      }
+      return null;
+    }
+
+    function parseAutolink(text, start) {
+      if (text[start] !== '<') return null;
+      const closeIndex = text.indexOf('>', start + 1);
+      if (closeIndex === -1) return null;
+      const content = text.slice(start + 1, closeIndex);
+      if (/^https?:\/\//.test(content)) {
+        return { html: `<a href="${content}">${content}</a>`, endIndex: closeIndex + 1 };
+      }
+      if (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(content)) {
+        return { html: `<a href="mailto:${content}">${content}</a>`, endIndex: closeIndex + 1 };
+      }
+      return null;
+    }
+
+    function collectEmphasisDelimiters(text, start, end) {
+      const delimiters = [];
+      let i = start;
+      while (i < end) {
+        const char = text[i];
+        if (char !== '*' && char !== '_') {
+          i++;
+          continue;
+        }
+        let count = 0;
+        const delimStart = i;
+        while (i < end && text[i] === char) {
+          count++;
+          i++;
+        }
+        const before = delimStart > start ? text[delimStart - 1] : ' ';
+        const after = i < end ? text[i] : ' ';
+        const beforeIsWhitespace = /\s/.test(before);
+        const afterIsWhitespace = /\s/.test(after);
+        const canOpen = !afterIsWhitespace;
+        const canClose = !beforeIsWhitespace;
+        delimiters.push({ type: char, count, position: delimStart, canOpen, canClose, matched: 0 });
+      }
+      return delimiters;
+    }
+
+    function matchEmphasisDelimiters(delimiters) {
+      const potentialMatches = [];
+      for (let closerIdx = 0; closerIdx < delimiters.length; closerIdx++) {
+        const closer = delimiters[closerIdx];
+        if (!closer.canClose) continue;
+        for (let openerIdx = 0; openerIdx < closerIdx; openerIdx++) {
+          const opener = delimiters[openerIdx];
+          if (!opener.canOpen) continue;
+          if (opener.type !== closer.type) continue;
+          if (opener.matched >= opener.count) continue;
+          if (closer.matched >= closer.count) continue;
+          const openerAvailable = opener.count - opener.matched;
+          const closerAvailable = closer.count - closer.matched;
+          const maxMatch = Math.min(openerAvailable, closerAvailable);
+          const matchCount = Math.min(maxMatch, 3);
+          const span = closer.position - opener.position;
+          potentialMatches.push({ openerIdx, closerIdx, span, matchCount });
+        }
+      }
+      potentialMatches.sort((a, b) => a.span - b.span);
+      for (const match of potentialMatches) {
+        const opener = delimiters[match.openerIdx];
+        const closer = delimiters[match.closerIdx];
+        const openerAvailable = opener.count - opener.matched;
+        const closerAvailable = closer.count - closer.matched;
+        if (openerAvailable <= 0 || closerAvailable <= 0) continue;
+        const maxMatch = Math.min(openerAvailable, closerAvailable);
+        const matchCount = Math.min(maxMatch, 3);
+        opener.matched += matchCount;
+        closer.matched += matchCount;
+        opener.pairedWith = match.closerIdx;
+      }
+    }
+
+    function buildEmphasisHtml(text, start, end, delimiters, opts, definitions) {
+      if (delimiters.length === 0) return null;
+      let openerIdx = -1;
+      for (let i = 0; i < delimiters.length; i++) {
+        if (delimiters[i].canOpen && delimiters[i].matched > 0 && delimiters[i].pairedWith !== undefined) {
+          openerIdx = i;
+          break;
+        }
+      }
+      if (openerIdx === -1) return null;
+      const opener = delimiters[openerIdx];
+      const closerIdx = opener.pairedWith;
+      if (closerIdx === undefined || closerIdx >= delimiters.length) return null;
+      const closer = delimiters[closerIdx];
+      if (!closer.canClose || closer.matched === 0) return null;
+      const matchCount = Math.min(opener.matched, closer.matched, 3);
+      const contentStart = opener.position + matchCount;
+      const contentEnd = closer.position;
+      const content = text.slice(contentStart, contentEnd);
+      const processedContent = processInlineSinglePass(content, opts, definitions);
+      let html;
+      if (matchCount >= 3) {
+        html = `<strong><em>${processedContent}</em></strong>`;
+      } else if (matchCount === 2) {
+        html = `<strong>${processedContent}</strong>`;
+      } else {
+        html = `<em>${processedContent}</em>`;
+      }
+      const endIndex = closer.position + closer.matched;
+      return { html, endIndex };
+    }
+
+    function parseEmphasis(text, start, opts, definitions) {
+      const char = text[start];
+      if (char !== '*' && char !== '_') return null;
+      let openCount = 0;
+      let i = start;
+      while (i < text.length && text[i] === char) {
+        openCount++;
+        i++;
+      }
+      if (i >= text.length || /\s/.test(text[i] ?? '')) return null;
+      let searchEnd = i + 1;
+      let foundClosingDelim = false;
+      while (searchEnd < text.length && searchEnd - start < 1000) {
+        if (text[searchEnd] === char) {
+          foundClosingDelim = true;
+          searchEnd += 50;
+          if (searchEnd > text.length) searchEnd = text.length;
+          break;
+        }
+        searchEnd++;
+      }
+      if (!foundClosingDelim) return null;
+      const delimiters = collectEmphasisDelimiters(text, start, searchEnd);
+      if (delimiters.length < 2) return null;
+      matchEmphasisDelimiters(delimiters);
+      const result = buildEmphasisHtml(text, start, searchEnd, delimiters, opts, definitions);
+      return result;
+    }
+
+    function parseStrikethrough(text, start, opts, definitions) {
+      if (text[start] !== '~' || text[start + 1] !== '~') return null;
+      const closeIndex = text.indexOf('~~', start + 2);
+      if (closeIndex === -1) return null;
+      const content = text.slice(start + 2, closeIndex);
+      if (!content) return null;
+      const processedContent = processInlineSinglePass(content, opts, definitions);
+      return { html: `<del>${processedContent}</del>`, endIndex: closeIndex + 2 };
+    }
+
+    function parseGfmAutolink(text, start) {
+      if (text.slice(start, start + 7) === 'http://' || text.slice(start, start + 8) === 'https://') {
+        let i = start;
+        while (i < text.length && !/\s/.test(text[i] ?? '') && text[i] !== '<' && text[i] !== '>') {
+          i++;
+        }
+        let url = text.slice(start, i);
+        const match = url.match(GFM_URL_PUNCTUATION);
+        if (match) {
+          url = url.slice(0, -match[0].length);
+          i -= match[0].length;
+        }
+        if (url.length > 8) {
+          return { html: `<a href="${url}">${url}</a>`, endIndex: i };
+        }
+      }
+      if (text.slice(start, start + 4) === 'www.') {
+        let i = start;
+        while (i < text.length && !/\s/.test(text[i] ?? '') && text[i] !== '<' && text[i] !== '>') {
+          i++;
+        }
+        let url = text.slice(start, i);
+        const match = url.match(GFM_URL_PUNCTUATION);
+        if (match) {
+          url = url.slice(0, -match[0].length);
+          i -= match[0].length;
+        }
+        if (url.length > 4) {
+          return { html: `<a href="http://${url}">${url}</a>`, endIndex: i };
+        }
+      }
+      const emailMatch = text.slice(start).match(GFM_EMAIL_PATTERN);
+      if (emailMatch) {
+        return { html: `<a href="mailto:${emailMatch[0]}">${emailMatch[0]}</a>`, endIndex: start + emailMatch[0].length };
+      }
+      return null;
+    }
+
+    function processInlineSinglePass(text, opts, definitions = new Map()) {
+      const parts = [];
+      let i = 0;
+      const checkStrikethrough = opts.gfm === true;
+      const checkGfmAutolinks = opts.gfm === true;
+
+      while (i < text.length) {
+        const char = text[i];
+        const next = text[i + 1];
+
+        if (char === '\\' && i + 1 < text.length && isEscapable(next ?? '')) {
+          parts.push(escapeHtmlText(next ?? ''));
+          i += 2;
+          continue;
+        }
+
+        if (char === '`') {
+          const result = parseCodeSpan(text, i);
+          if (result) {
+            parts.push(result.html);
+            i = result.endIndex;
+            continue;
+          }
+        }
+
+        if (char === '!' && next === '[') {
+          const result = parseImageSinglePass(text, i, opts, definitions);
+          if (result) {
+            parts.push(result.html);
+            i = result.endIndex;
+            continue;
+          }
+        }
+
+        if (char === '[') {
+          const result = parseLinkSinglePass(text, i, opts, definitions);
+          if (result) {
+            parts.push(result.html);
+            i = result.endIndex;
+            continue;
+          }
+        }
+
+        if (char === '<') {
+          const result = parseAutolink(text, i);
+          if (result) {
+            parts.push(result.html);
+            i = result.endIndex;
+            continue;
+          }
+        }
+
+        if (checkStrikethrough && char === '~' && next === '~') {
+          const result = parseStrikethrough(text, i, opts, definitions);
+          if (result) {
+            parts.push(result.html);
+            i = result.endIndex;
+            continue;
+          }
+        }
+
+        if (char === '*' || char === '_') {
+          const result = parseEmphasis(text, i, opts, definitions);
+          if (result) {
+            parts.push(result.html);
+            i = result.endIndex;
+            continue;
+          }
+        }
+
+        if (char === '\n') {
+          if (parts.length >= 2) {
+            const last = parts[parts.length - 1];
+            const secondLast = parts[parts.length - 2];
+            if (last === ' ' && secondLast === ' ') {
+              parts.pop();
+              parts.pop();
+              parts.push('<br />\n');
+              i++;
+              continue;
+            }
+          }
+          if (parts.length >= 1) {
+            const last = parts[parts.length - 1];
+            if (last === '\\') {
+              parts.pop();
+              parts.push('<br />\n');
+              i++;
+              continue;
+            }
+          }
+          if (opts.breaks) {
+            parts.push('<br />\n');
+            i++;
+            continue;
+          }
+        }
+
+        if (checkGfmAutolinks) {
+          const prevChar = i > 0 ? text[i - 1] : '';
+          if (i === 0 || /\s/.test(prevChar ?? '') || prevChar === '(') {
+            const result = parseGfmAutolink(text, i);
+            if (result) {
+              parts.push(result.html);
+              i = result.endIndex;
+              continue;
+            }
+          }
+        }
+
+        if (char === '&') {
+          const remaining = text.slice(i);
+          const decMatch = remaining.match(/^&#(\d+);/);
+          const hexMatch = remaining.match(/^&#x([0-9a-fA-F]+);/);
+          if (decMatch) {
+            const code = parseInt(decMatch[1], 10);
+            parts.push(String.fromCharCode(code));
+            i += decMatch[0].length;
+            continue;
+          }
+          if (hexMatch) {
+            const code = parseInt(hexMatch[1], 16);
+            parts.push(String.fromCharCode(code));
+            i += hexMatch[0].length;
+            continue;
+          }
+        }
+
+        const plainStart = i;
+        while (i < text.length) {
+          const c = text[i];
+          const n = text[i + 1];
+          if (c === '\\' || c === '`' || c === '!' || c === '[' || c === '<') break;
+          if (c === '*' || c === '_') break;
+          if (c === '\n') break;
+          if (c === '&') break;
+          if (checkStrikethrough && c === '~' && n === '~') break;
+          if (checkGfmAutolinks) {
+            if ((c === 'h' || c === 'w')) {
+              if (text.slice(i, i + 7) === 'http://' ||
+                  text.slice(i, i + 8) === 'https://' ||
+                  text.slice(i, i + 4) === 'www.') break;
+            }
+            if (i > plainStart && c === ' ' && n && /[a-zA-Z0-9]/.test(n)) {
+              i++;
+              break;
+            }
+          }
+          if (c === ' ' && (n === ' ' || n === '\n')) break;
+          i++;
+        }
+        if (i > plainStart) {
+          parts.push(text.slice(plainStart, i));
+          continue;
+        }
+        parts.push(char ?? '');
+        i++;
+      }
+
+      let result = parts.join('');
+      if (opts.sanitize) {
+        result = result.replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, '');
+      }
+      result = removeDangerousTags(result, !opts.sanitize);
+      return result;
+    }
+
+    function removeDangerousTags(html, preserveContent = true) {
+      const dangerous = ['script', 'style', 'iframe', 'object', 'embed'];
+      for (const tag of dangerous) {
+        if (preserveContent) {
+          html = html.replace(new RegExp(`<${tag}[^>]*>`, 'gi'), '');
+          html = html.replace(new RegExp(`</${tag}>`, 'gi'), '');
+        } else {
+          const regex = new RegExp(`<${tag}[^>]*>.*?</${tag}>`, 'gis');
+          html = html.replace(regex, '');
+          html = html.replace(new RegExp(`<${tag}[^>]*>`, 'gi'), '');
+        }
+      }
+      return html;
+    }
+
+    function markdown(input, options) {
+      const opts = {
+        gfm: options?.gfm ?? true,
+        sanitize: options?.sanitize ?? true,
+        breaks: options?.breaks ?? false,
+        linkTarget: options?.linkTarget ?? '',
+      };
+      if (input === '') return '';
+      const { text: cleanedInput, definitions } = extractLinkDefinitions(input);
+      const originalLines = cleanedInput.split('\n');
+      const expandedInput = expandTabs(cleanedInput);
+      const blocks = parseBlocks(expandedInput, opts, 0, originalLines);
+      return blocks.map(block => renderBlock(block, opts, definitions, 0)).join('\n');
+    }
+
+    // markdown-strip.js
+    const PRESETS = {
+      plaintext: [],
+      inline: ['strong', 'em', 'code', 'a', 'br'],
+      safe: ['p', 'strong', 'em', 'code', 'pre', 'ul', 'ol', 'li', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+      prose: ['p', 'strong', 'em', 'a', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'br'],
+    };
+
+    function markdownStrip(input, config) {
+      if (!input) return '';
+      let html = input;
+      if (!/<[a-z][\s\S]*>/i.test(input)) {
+        html = markdown(input);
+      }
+      let allowedTags;
+      let unwrap = true;
+      if (!config) return html;
+      if (typeof config === 'string') {
+        allowedTags = PRESETS[config];
+      } else {
+        if (config.allow && config.strip) {
+          throw new Error('Cannot use both "allow" and "strip" options');
+        }
+        unwrap = config.unwrap ?? true;
+        if (config.allow) {
+          allowedTags = config.allow;
+        } else if (config.strip) {
+          const allTags = ['p', 'div', 'span', 'br', 'hr', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+            'strong', 'em', 'b', 'i', 'u', 'del', 'code', 'pre', 'a', 'img',
+            'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'blockquote'];
+          allowedTags = allTags.filter(tag => !config.strip.includes(tag));
+        } else {
+          allowedTags = ['p', 'div', 'span', 'br', 'hr', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+            'strong', 'em', 'b', 'i', 'u', 'del', 'code', 'pre', 'a', 'img',
+            'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'blockquote'];
+        }
+      }
+      return stripTags(html, allowedTags, unwrap);
+    }
+
+    function stripTags(html, allowedTags, unwrap) {
+      let result = html;
+      const DANGEROUS_TAGS = ['script', 'style', 'iframe', 'object', 'embed'];
+      for (const tag of DANGEROUS_TAGS) {
+        const regex = new RegExp(`<${tag}[^>]*>.*?</${tag}>`, 'gi');
+        result = result.replace(regex, '');
+        result = result.replace(new RegExp(`<${tag}[^>]*>`, 'gi'), '');
+      }
+      const tagRegex = /<\/?([a-z][a-z0-9]*)[^>]*>/gi;
+      const tags = new Set();
+      let match;
+      while ((match = tagRegex.exec(html)) !== null) {
+        const tagName = match[1];
+        if (tagName) tags.add(tagName.toLowerCase());
+      }
+      for (const tag of tags) {
+        if (DANGEROUS_TAGS.includes(tag)) continue;
+        if (allowedTags.includes(tag)) continue;
+        if (unwrap) {
+          const openRegex = new RegExp(`<${tag}[^>]*>`, 'gi');
+          const closeRegex = new RegExp(`</${tag}>`, 'gi');
+          result = result.replace(openRegex, '');
+          result = result.replace(closeRegex, '');
+        } else {
+          const regex = new RegExp(`<${tag}[^>]*>.*?</${tag}>`, 'gi');
+          result = result.replace(regex, '');
+          result = result.replace(new RegExp(`<${tag}[^>]*/>`, 'gi'), '');
+        }
+      }
+      if (!allowedTags.includes('img')) {
+        result = result.replace(/<img[^>]*>/gi, '');
+      }
+      return result;
+    }
+
+    // Expose to window
+    window.markdown = markdown;
+    window.markdownStrip = markdownStrip;
+    window.MarkdownError = MarkdownError;
+    window.ValidationError = ValidationError;
+    window.ParseError = ParseError;
+  </script>
+
+  <script>
+    // ============================================
+    // DEMO AND TEST CODE
+    // ============================================
+
+    const tests = [
+      // Basic block elements
+      {
+        name: 'renders ATX headings (h1-h6)',
+        fn: async () => {
+          const input = '# H1\n## H2\n### H3\n#### H4\n##### H5\n###### H6';
+          const output = markdown(input);
+          if (!output.includes('<h1>H1</h1>')) throw new Error('Missing h1');
+          if (!output.includes('<h6>H6</h6>')) throw new Error('Missing h6');
+        }
+      },
+      {
+        name: 'renders setext headings (level 1 and 2)',
+        fn: async () => {
+          const input = 'Heading 1\n===\n\nHeading 2\n---';
+          const output = markdown(input);
+          if (!output.includes('<h1>Heading 1</h1>')) throw new Error('Missing h1');
+          if (!output.includes('<h2>Heading 2</h2>')) throw new Error('Missing h2');
+        }
+      },
+      {
+        name: 'renders paragraphs',
+        fn: async () => {
+          const input = 'This is a paragraph.\n\nThis is another paragraph.';
+          const output = markdown(input);
+          if (!output.includes('<p>This is a paragraph.</p>')) throw new Error('Missing first paragraph');
+          if (!output.includes('<p>This is another paragraph.</p>')) throw new Error('Missing second paragraph');
+        }
+      },
+      {
+        name: 'renders fenced code blocks',
+        fn: async () => {
+          const input = '```javascript\nconst x = 1;\n```';
+          const output = markdown(input);
+          if (!output.includes('<pre><code class="language-javascript">')) throw new Error('Missing code block');
+          if (!output.includes('const x = 1;')) throw new Error('Missing code content');
+        }
+      },
+      {
+        name: 'renders indented code blocks',
+        fn: async () => {
+          const input = '    const x = 1;\n    const y = 2;';
+          const output = markdown(input);
+          if (!output.includes('<pre><code>')) throw new Error('Missing code block');
+          if (!output.includes('const x = 1;')) throw new Error('Missing code content');
+        }
+      },
+      {
+        name: 'renders thematic breaks (hr)',
+        fn: async () => {
+          const input = '---';
+          const output = markdown(input);
+          if (!output.includes('<hr />')) throw new Error('Missing hr');
+        }
+      },
+      {
+        name: 'renders unordered lists',
+        fn: async () => {
+          const input = '- Item 1\n- Item 2\n- Item 3';
+          const output = markdown(input);
+          if (!output.includes('<ul>')) throw new Error('Missing ul');
+          if (!output.includes('<li>Item 1</li>')) throw new Error('Missing first item');
+          if (!output.includes('<li>Item 3</li>')) throw new Error('Missing last item');
+        }
+      },
+      {
+        name: 'renders ordered lists with correct start number',
+        fn: async () => {
+          const input = '5. Item 1\n6. Item 2';
+          const output = markdown(input);
+          if (!output.includes('<ol start="5">')) throw new Error('Missing ordered list with start=5');
+          if (!output.includes('<li>Item 1</li>')) throw new Error('Missing list item');
+        }
+      },
+      {
+        name: 'renders blockquotes',
+        fn: async () => {
+          const input = '> This is a quote\n> Second line';
+          const output = markdown(input);
+          if (!output.includes('<blockquote>')) throw new Error('Missing blockquote');
+          if (!output.includes('This is a quote')) throw new Error('Missing quote content');
+        }
+      },
+
+      // Inline elements
+      {
+        name: 'renders bold text with **',
+        fn: async () => {
+          const input = '**bold text**';
+          const output = markdown(input);
+          if (!output.includes('<strong>bold text</strong>')) throw new Error('Missing strong tag');
+        }
+      },
+      {
+        name: 'renders italic text with *',
+        fn: async () => {
+          const input = '*italic text*';
+          const output = markdown(input);
+          if (!output.includes('<em>italic text</em>')) throw new Error('Missing em tag');
+        }
+      },
+      {
+        name: 'renders bold italic with ***',
+        fn: async () => {
+          const input = '***bold italic***';
+          const output = markdown(input);
+          if (!output.includes('<strong><em>bold italic</em></strong>')) throw new Error('Missing strong and em tags');
+        }
+      },
+      {
+        name: 'renders inline code spans',
+        fn: async () => {
+          const input = 'Use `code` here';
+          const output = markdown(input);
+          if (!output.includes('<code>code</code>')) throw new Error('Missing code span');
+        }
+      },
+      {
+        name: 'renders links with [text](url)',
+        fn: async () => {
+          const input = '[link text](https://example.com)';
+          const output = markdown(input);
+          if (!output.includes('<a href="https://example.com">link text</a>')) throw new Error('Missing link');
+        }
+      },
+      {
+        name: 'renders links with title attribute',
+        fn: async () => {
+          const input = '[link](https://example.com "title")';
+          const output = markdown(input);
+          if (!output.includes('title="title"')) throw new Error('Missing title attribute');
+        }
+      },
+      {
+        name: 'renders images with ![alt](src)',
+        fn: async () => {
+          const input = '![alt text](https://example.com/image.png)';
+          const output = markdown(input);
+          if (!output.includes('<img src="https://example.com/image.png" alt="alt text"')) throw new Error('Missing image');
+        }
+      },
+      {
+        name: 'renders autolinks <url>',
+        fn: async () => {
+          const input = '<https://example.com>';
+          const output = markdown(input);
+          if (!output.includes('<a href="https://example.com">https://example.com</a>')) throw new Error('Missing autolink');
+        }
+      },
+      {
+        name: 'renders email autolinks',
+        fn: async () => {
+          const input = '<user@example.com>';
+          const output = markdown(input);
+          if (!output.includes('mailto:user@example.com')) throw new Error('Missing email autolink');
+        }
+      },
+
+      // GFM features
+      {
+        name: 'renders GFM tables',
+        fn: async () => {
+          const input = '| Col1 | Col2 |\n|------|------|\n| A | B |';
+          const output = markdown(input, { gfm: true });
+          if (!output.includes('<table>')) throw new Error('Missing table');
+          if (!output.includes('<th>Col1</th>')) throw new Error('Missing header');
+          if (!output.includes('<td>A</td>')) throw new Error('Missing cell');
+        }
+      },
+      {
+        name: 'renders GFM strikethrough',
+        fn: async () => {
+          const input = '~~deleted text~~';
+          const output = markdown(input, { gfm: true });
+          if (!output.includes('<del>deleted text</del>')) throw new Error('Missing del tag');
+        }
+      },
+      {
+        name: 'renders GFM task lists',
+        fn: async () => {
+          const input = '- [x] Completed\n- [ ] Not completed';
+          const output = markdown(input, { gfm: true });
+          if (!output.includes('type="checkbox"')) throw new Error('Missing checkbox');
+          if (!output.includes('checked')) throw new Error('Missing checked attribute');
+        }
+      },
+      {
+        name: 'renders GFM bare URLs',
+        fn: async () => {
+          const input = 'Visit https://example.com for more';
+          const output = markdown(input, { gfm: true });
+          if (!output.includes('<a href="https://example.com">https://example.com</a>')) throw new Error('Missing GFM autolink');
+        }
+      },
+      {
+        name: 'renders GFM www links',
+        fn: async () => {
+          const input = 'Visit www.example.com';
+          const output = markdown(input, { gfm: true });
+          if (!output.includes('<a href="http://www.example.com">www.example.com</a>')) throw new Error('Missing www link');
+        }
+      },
+
+      // Options
+      {
+        name: 'sanitizes dangerous URLs',
+        fn: async () => {
+          const input = '[click](javascript:alert("xss"))';
+          const output = markdown(input, { sanitize: true });
+          if (output.includes('javascript:')) throw new Error('Dangerous URL not sanitized');
+        }
+      },
+      {
+        name: 'converts line breaks with breaks option',
+        fn: async () => {
+          const input = 'Line 1\nLine 2';
+          const output = markdown(input, { breaks: true });
+          if (!output.includes('<br />')) throw new Error('Missing br tag');
+        }
+      },
+      {
+        name: 'adds target attribute to links',
+        fn: async () => {
+          const input = '[link](https://example.com)';
+          const output = markdown(input, { linkTarget: '_blank' });
+          if (!output.includes('target="_blank"')) throw new Error('Missing target attribute');
+        }
+      },
+
+      // Edge cases and escaping
+      {
+        name: 'escapes HTML in content',
+        fn: async () => {
+          const input = '<script>alert("xss")</script>';
+          const output = markdown(input);
+          if (output.includes('<script>')) throw new Error('HTML not escaped');
+          if (!output.includes('&lt;')) throw new Error('Missing escaped HTML');
+        }
+      },
+      {
+        name: 'handles backslash escapes',
+        fn: async () => {
+          const input = '\\*not italic\\*';
+          const output = markdown(input);
+          if (output.includes('<em>')) throw new Error('Escape not working');
+          if (!output.includes('*not italic*')) throw new Error('Missing escaped asterisks');
+        }
+      },
+      {
+        name: 'handles nested emphasis correctly',
+        fn: async () => {
+          const input = '**bold *and italic* text**';
+          const output = markdown(input);
+          if (!output.includes('<strong>') || !output.includes('<em>')) throw new Error('Missing nested emphasis');
+        }
+      },
+      {
+        name: 'handles empty input',
+        fn: async () => {
+          const output = markdown('');
+          if (output !== '') throw new Error('Empty input should return empty string');
+        }
+      },
+
+      // markdownStrip tests
+      {
+        name: 'markdownStrip: plaintext preset removes all tags',
+        fn: async () => {
+          const input = '<p><strong>Bold</strong> and <em>italic</em></p>';
+          const output = markdownStrip(input, 'plaintext');
+          if (output.includes('<')) throw new Error('Tags not removed');
+          if (!output.includes('Bold')) throw new Error('Content removed');
+        }
+      },
+      {
+        name: 'markdownStrip: inline preset keeps inline tags',
+        fn: async () => {
+          const input = '<p><strong>Bold</strong></p>';
+          const output = markdownStrip(input, 'inline');
+          if (output.includes('<p>')) throw new Error('Block tags not removed');
+          if (!output.includes('<strong>')) throw new Error('Inline tags removed');
+        }
+      },
+      {
+        name: 'markdownStrip: safe preset allows safe tags',
+        fn: async () => {
+          const input = '<p>Text</p><script>alert("xss")</script>';
+          const output = markdownStrip(input, 'safe');
+          if (output.includes('<script>')) throw new Error('Dangerous tags not removed');
+          if (!output.includes('<p>')) throw new Error('Safe tags removed');
+        }
+      },
+      {
+        name: 'markdownStrip: custom allow list',
+        fn: async () => {
+          const input = '<p><strong>Bold</strong></p>';
+          const output = markdownStrip(input, { allow: ['strong'] });
+          if (output.includes('<p>')) throw new Error('Disallowed tags not removed');
+          if (!output.includes('<strong>')) throw new Error('Allowed tags removed');
+        }
+      },
+      {
+        name: 'markdownStrip: custom strip list',
+        fn: async () => {
+          const input = '<p><strong>Bold</strong></p>';
+          const output = markdownStrip(input, { strip: ['p'] });
+          if (output.includes('<p>')) throw new Error('Stripped tags not removed');
+          if (!output.includes('<strong>')) throw new Error('Non-stripped tags removed');
+        }
+      },
+    ];
+
+    function logResult(name, status, error) {
+      const output = document.getElementById('test-output');
+      const className = status === 'PASS' ? 'test-pass' : 'test-fail';
+      const errorMsg = error ? ` - ${error}` : '';
+      output.innerHTML += `<div class="${className}">[${status}] ${name}${errorMsg}</div>`;
+      output.scrollTop = output.scrollHeight;
+    }
+
+    function logSummary(passed, failed) {
+      const summary = document.getElementById('summary');
+      const total = passed + failed;
+      const className = failed === 0 ? 'test-pass' : 'test-fail';
+      summary.innerHTML = `<span class="${className}">${passed}/${total} tests passed</span>`;
+    }
+
+    async function runAllTests() {
+      clearResults();
+      let passed = 0, failed = 0;
+      for (const test of tests) {
+        try {
+          await test.fn();
+          logResult(test.name, 'PASS');
+          passed++;
+        } catch (e) {
+          logResult(test.name, 'FAIL', e.message);
+          failed++;
+        }
+      }
+      logSummary(passed, failed);
+    }
+
+    function clearResults() {
+      document.getElementById('test-output').innerHTML = '';
+      document.getElementById('summary').innerHTML = '';
+    }
+
+    // Interactive demo functions
+    function renderMarkdown() {
+      const input = document.getElementById('markdown-input').value;
+      const opts = {
+        gfm: document.getElementById('opt-gfm').checked,
+        sanitize: document.getElementById('opt-sanitize').checked,
+        breaks: document.getElementById('opt-breaks').checked,
+        linkTarget: document.getElementById('opt-target').value,
+      };
+      try {
+        const html = markdown(input, opts);
+        document.getElementById('markdown-output').innerHTML = html;
+      } catch (e) {
+        document.getElementById('markdown-output').innerHTML = `<span style="color: red;">Error: ${e.message}</span>`;
+      }
+    }
+
+    function renderStrip() {
+      const input = document.getElementById('strip-input').value;
+      const preset = document.getElementById('strip-preset').value;
+      try {
+        const html = preset === 'none' ? markdownStrip(input) : markdownStrip(input, preset);
+        document.getElementById('strip-output').innerHTML = html;
+      } catch (e) {
+        document.getElementById('strip-output').innerHTML = `<span style="color: red;">Error: ${e.message}</span>`;
+      }
+    }
+  </script>
+</body>
+</html>
