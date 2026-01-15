@@ -17,7 +17,7 @@ A lightweight, standards-compliant markdown parser for rendering user content sa
 - **Zero Dependencies** - No supply chain risk or bloated bundles
 - **Tree-Shakeable ESM** - Import only what you need
 
-[Read the full manual →](https://github.com/motioneffector/markdown)
+[Read the full manual →](https://motioneffector.github.io/markdown/manual/)
 
 ## Quick Start
 
