@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parsing API - @motioneffector/markdown</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/markdown</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/markdown" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/markdown" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/markdown</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-markdown-render.html">Your First Markdown Render</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-safety-by-default.html">Safety by Default</a></li>
+<li><a href="concept-gfm-extensions.html">GFM Extensions</a></li>
+<li><a href="concept-strip-presets.html">Strip Presets</a></li>
+<li><a href="concept-custom-tag-filtering.html">Custom Tag Filtering</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-handling-user-input.html">Handling User Input</a></li>
+<li><a href="guide-filtering-html-output.html">Filtering HTML Output</a></li>
+<li><a href="guide-rendering-tables.html">Rendering Tables</a></li>
+<li><a href="guide-configuring-links.html">Configuring Links</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parsing.html">Parsing API</a></li>
+<li><a href="api-stripping.html">Stripping API</a></li>
+<li><a href="api-errors.html">Error Types</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>Parsing API</h1>
+<p>Functions and types for converting markdown to HTML.</p>
+<hr>
+<h2><code>markdown()</code></h2>
+<p>Convert markdown text to safe HTML.</p>
+<p><strong>Signature:</strong></p>
+<pre><code class="language-typescript">function markdown(
+  input: string,
+  options?: MarkdownOptions
+): string
+</code></pre>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>input</code></td>
+<td><code>string</code></td>
+<td>Yes</td>
+<td>Markdown text to convert</td>
+</tr>
+<tr>
+<td><code>options</code></td>
+<td><code>MarkdownOptions</code></td>
+<td>No</td>
+<td>Parsing options. Default: all safety features enabled</td>
+</tr>
+</tbody></table>
+<p><strong>Returns:</strong> <code>string</code> — HTML output with all markdown converted and dangerous content removed.</p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+// Basic usage
+const html = markdown(&#39;# Hello **world**&#39;)
+// =&gt; &#39;&lt;h1&gt;Hello &lt;strong&gt;world&lt;/strong&gt;&lt;/h1&gt;&#39;
+
+// With options
+const html = markdown(&#39;[Link](url)&#39;, {
+  linkTarget: &#39;_blank&#39;,
+  gfm: true,
+  sanitize: true,
+  breaks: false
+})
+</code></pre>
+<hr>
+<h2>Types</h2>
+<h3><code>MarkdownOptions</code></h3>
+<p>Configuration options for the <code>markdown()</code> function.</p>
+<pre><code class="language-typescript">interface MarkdownOptions {
+  gfm?: boolean
+  sanitize?: boolean
+  breaks?: boolean
+  linkTarget?: string
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>gfm</code></td>
+<td><code>boolean</code></td>
+<td>No</td>
+<td>Enable GitHub Flavored Markdown (tables, strikethrough, task lists, autolinks). Default: <code>true</code></td>
+</tr>
+<tr>
+<td><code>sanitize</code></td>
+<td><code>boolean</code></td>
+<td>No</td>
+<td>Sanitize dangerous HTML content (scripts, event handlers, dangerous URLs). Default: <code>true</code></td>
+</tr>
+<tr>
+<td><code>breaks</code></td>
+<td><code>boolean</code></td>
+<td>No</td>
+<td>Convert single line breaks to <code>&lt;br&gt;</code> tags. Default: <code>false</code></td>
+</tr>
+<tr>
+<td><code>linkTarget</code></td>
+<td><code>string</code></td>
+<td>No</td>
+<td>Add <code>target</code> attribute to links. Example: <code>&#39;_blank&#39;</code>. Default: none</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Option Details</h2>
+<h3><code>gfm</code></h3>
+<p>Enables GitHub Flavored Markdown extensions.</p>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+// Enabled (default)
+markdown(&#39;| A | B |\n|---|---|\n| 1 | 2 |&#39;)
+// =&gt; &#39;&lt;table&gt;...&lt;/table&gt;&#39;
+
+// Disabled
+markdown(&#39;| A | B |\n|---|---|\n| 1 | 2 |&#39;, { gfm: false })
+// =&gt; &#39;&lt;p&gt;| A | B |...&lt;/p&gt;&#39;
+</code></pre>
+<p>GFM features:</p>
+<ul>
+<li>Tables with alignment</li>
+<li>Strikethrough (<code>~~text~~</code>)</li>
+<li>Task lists (<code>- [x] done</code>)</li>
+<li>Extended autolinks (bare URLs)</li>
+</ul>
+<h3><code>sanitize</code></h3>
+<p>Controls URL sanitization. Dangerous tags are always removed regardless of this setting.</p>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+// Enabled (default)
+markdown(&#39;[Click](javascript:alert(1))&#39;)
+// =&gt; &#39;&lt;p&gt;Click&lt;/p&gt;&#39; (dangerous URL removed)
+
+// Disabled (for trusted content only)
+markdown(&#39;&lt;div class=&quot;custom&quot;&gt;text&lt;/div&gt;&#39;, { sanitize: false })
+// =&gt; &#39;&lt;p&gt;&lt;div class=&quot;custom&quot;&gt;text&lt;/div&gt;&lt;/p&gt;&#39;
+</code></pre>
+<p>Even with <code>sanitize: false</code>:</p>
+<ul>
+<li><code>&lt;script&gt;</code>, <code>&lt;style&gt;</code>, <code>&lt;iframe&gt;</code>, <code>&lt;object&gt;</code>, <code>&lt;embed&gt;</code> are always removed</li>
+<li>Event handlers (<code>onclick</code>, etc.) are always removed</li>
+</ul>
+<h3><code>breaks</code></h3>
+<p>Controls how single line breaks are handled.</p>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+// Disabled (default) - CommonMark behavior
+markdown(&#39;Line 1\nLine 2&#39;)
+// =&gt; &#39;&lt;p&gt;Line 1\nLine 2&lt;/p&gt;&#39; (soft break)
+
+// Enabled - every newline becomes &lt;br&gt;
+markdown(&#39;Line 1\nLine 2&#39;, { breaks: true })
+// =&gt; &#39;&lt;p&gt;Line 1&lt;br /&gt;\nLine 2&lt;/p&gt;&#39;
+</code></pre>
+<p>Without <code>breaks: true</code>, use two spaces + newline or backslash + newline for hard breaks.</p>
+<h3><code>linkTarget</code></h3>
+<p>Adds a <code>target</code> attribute to all links.</p>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+markdown(&#39;[Link](https://example.com)&#39;, { linkTarget: &#39;_blank&#39; })
+// =&gt; &#39;&lt;p&gt;&lt;a href=&quot;https://example.com&quot; target=&quot;_blank&quot;&gt;Link&lt;/a&gt;&lt;/p&gt;&#39;
+</code></pre>
+<p>Common values:</p>
+<ul>
+<li><code>&#39;_blank&#39;</code> - Open in new tab</li>
+<li><code>&#39;_self&#39;</code> - Open in same frame</li>
+<li><code>&#39;_parent&#39;</code> - Open in parent frame</li>
+<li><code>&#39;_top&#39;</code> - Open in full window</li>
+</ul>
+<hr>
+<h2>Supported Markdown</h2>
+<h3>Block Elements</h3>
+<table>
+<thead>
+<tr>
+<th>Element</th>
+<th>Syntax</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ATX Heading</td>
+<td><code># H1</code> to <code>###### H6</code></td>
+<td><code>&lt;h1&gt;</code> to <code>&lt;h6&gt;</code></td>
+</tr>
+<tr>
+<td>Setext Heading</td>
+<td><code>Heading\n===</code></td>
+<td><code>&lt;h1&gt;</code>, <code>&lt;h2&gt;</code></td>
+</tr>
+<tr>
+<td>Paragraph</td>
+<td>Text separated by blank lines</td>
+<td><code>&lt;p&gt;</code></td>
+</tr>
+<tr>
+<td>Blockquote</td>
+<td><code>&gt; quoted</code></td>
+<td><code>&lt;blockquote&gt;</code></td>
+</tr>
+<tr>
+<td>Unordered List</td>
+<td><code>- item</code> or <code>* item</code></td>
+<td><code>&lt;ul&gt;&lt;li&gt;</code></td>
+</tr>
+<tr>
+<td>Ordered List</td>
+<td><code>1. item</code></td>
+<td><code>&lt;ol&gt;&lt;li&gt;</code></td>
+</tr>
+<tr>
+<td>Fenced Code</td>
+<td><code>```lang ```</code></td>
+<td><code>&lt;pre&gt;&lt;code&gt;</code></td>
+</tr>
+<tr>
+<td>Indented Code</td>
+<td>4 spaces</td>
+<td><code>&lt;pre&gt;&lt;code&gt;</code></td>
+</tr>
+<tr>
+<td>Thematic Break</td>
+<td><code>---</code> or <code>***</code></td>
+<td><code>&lt;hr /&gt;</code></td>
+</tr>
+<tr>
+<td>Table (GFM)</td>
+<td><code>| A | B |</code></td>
+<td><code>&lt;table&gt;</code></td>
+</tr>
+</tbody></table>
+<h3>Inline Elements</h3>
+<table>
+<thead>
+<tr>
+<th>Element</th>
+<th>Syntax</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Bold</td>
+<td><code>**text**</code> or <code>__text__</code></td>
+<td><code>&lt;strong&gt;</code></td>
+</tr>
+<tr>
+<td>Italic</td>
+<td><code>*text*</code> or <code>_text_</code></td>
+<td><code>&lt;em&gt;</code></td>
+</tr>
+<tr>
+<td>Bold + Italic</td>
+<td><code>***text***</code></td>
+<td><code>&lt;strong&gt;&lt;em&gt;</code></td>
+</tr>
+<tr>
+<td>Code</td>
+<td><code>`code`</code></td>
+<td><code>&lt;code&gt;</code></td>
+</tr>
+<tr>
+<td>Link</td>
+<td><code>[text](url)</code></td>
+<td><code>&lt;a href&gt;</code></td>
+</tr>
+<tr>
+<td>Image</td>
+<td><code>![alt](src)</code></td>
+<td><code>&lt;img&gt;</code></td>
+</tr>
+<tr>
+<td>Strikethrough (GFM)</td>
+<td><code>~~text~~</code></td>
+<td><code>&lt;del&gt;</code></td>
+</tr>
+<tr>
+<td>Autolink</td>
+<td><code>&lt;url&gt;</code> or bare URL</td>
+<td><code>&lt;a href&gt;</code></td>
+</tr>
+<tr>
+<td>Hard Break</td>
+<td>Two spaces + newline</td>
+<td><code>&lt;br /&gt;</code></td>
+</tr>
+</tbody></table>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

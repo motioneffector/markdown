@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Installation - @motioneffector/markdown</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/markdown</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/markdown" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/markdown" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/markdown</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-markdown-render.html">Your First Markdown Render</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-safety-by-default.html">Safety by Default</a></li>
+<li><a href="concept-gfm-extensions.html">GFM Extensions</a></li>
+<li><a href="concept-strip-presets.html">Strip Presets</a></li>
+<li><a href="concept-custom-tag-filtering.html">Custom Tag Filtering</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-handling-user-input.html">Handling User Input</a></li>
+<li><a href="guide-filtering-html-output.html">Filtering HTML Output</a></li>
+<li><a href="guide-rendering-tables.html">Rendering Tables</a></li>
+<li><a href="guide-configuring-links.html">Configuring Links</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parsing.html">Parsing API</a></li>
+<li><a href="api-stripping.html">Stripping API</a></li>
+<li><a href="api-errors.html">Error Types</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>Installation</h1>
+<pre><code class="language-bash">npm install @motioneffector/markdown
+</code></pre>
+<h2>Requirements</h2>
+<ul>
+<li>Node.js 18+ or modern browser (ES2022+)</li>
+<li>TypeScript 5.0+ recommended</li>
+</ul>
+<h2>What&#39;s Included</h2>
+<p>The package exports two main functions and their types:</p>
+<pre><code class="language-typescript">import { markdown, markdownStrip } from &#39;@motioneffector/markdown&#39;
+import type { MarkdownOptions, StripPreset, StripConfig } from &#39;@motioneffector/markdown&#39;
+</code></pre>
+<p>No peer dependencies. No configuration files. Install and start using immediately.</p>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

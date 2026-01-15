@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your First Markdown Render - @motioneffector/markdown</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/markdown</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/markdown" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/markdown" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/markdown</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-markdown-render.html">Your First Markdown Render</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-safety-by-default.html">Safety by Default</a></li>
+<li><a href="concept-gfm-extensions.html">GFM Extensions</a></li>
+<li><a href="concept-strip-presets.html">Strip Presets</a></li>
+<li><a href="concept-custom-tag-filtering.html">Custom Tag Filtering</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-handling-user-input.html">Handling User Input</a></li>
+<li><a href="guide-filtering-html-output.html">Filtering HTML Output</a></li>
+<li><a href="guide-rendering-tables.html">Rendering Tables</a></li>
+<li><a href="guide-configuring-links.html">Configuring Links</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parsing.html">Parsing API</a></li>
+<li><a href="api-stripping.html">Stripping API</a></li>
+<li><a href="api-errors.html">Error Types</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>Your First Markdown Render</h1>
+<p>Convert markdown to safe HTML and control the output format.</p>
+<p>By the end of this guide, you&#39;ll have markdown rendering working with different output modes for different contexts.</p>
+<h2>What We&#39;re Building</h2>
+<p>A simple flow that takes user markdown, converts it to HTML, and produces different outputs for display, notifications, and search indexing:</p>
+<pre><code>User Input → markdown() → Full HTML
+                       → markdownStrip(&#39;inline&#39;) → Chat-safe HTML
+                       → markdownStrip(&#39;plaintext&#39;) → Plain text
+</code></pre>
+<h2>Step 1: Import the Functions</h2>
+<p>Both functions come from the same package.</p>
+<pre><code class="language-typescript">import { markdown, markdownStrip } from &#39;@motioneffector/markdown&#39;
+</code></pre>
+<p>That&#39;s the only import you need. No configuration objects, no setup functions.</p>
+<h2>Step 2: Convert Markdown to HTML</h2>
+<p>Pass any markdown string to <code>markdown()</code>. It returns safe HTML.</p>
+<pre><code class="language-typescript">const userInput = `
+# Welcome
+
+This is **bold** and this is *italic*.
+
+- List item 1
+- List item 2
+`
+
+const html = markdown(userInput)
+</code></pre>
+<p>The result is safe to render directly. Scripts, event handlers, and dangerous URLs are already removed.</p>
+<h2>Step 3: Strip for Different Contexts</h2>
+<p>Use <code>markdownStrip()</code> to filter the HTML for specific contexts.</p>
+<pre><code class="language-typescript">// For notifications or search: plain text only
+const plainText = markdownStrip(html, &#39;plaintext&#39;)
+// =&gt; &#39;Welcome\n\nThis is bold and this is italic.\n\nList item 1\nList item 2&#39;
+
+// For chat messages: inline formatting only
+const chatSafe = markdownStrip(html, &#39;inline&#39;)
+// =&gt; &#39;Welcome\n\nThis is &lt;strong&gt;bold&lt;/strong&gt; and this is &lt;em&gt;italic&lt;/em&gt;...&#39;
+
+// For comments: block elements but no links
+const commentSafe = markdownStrip(html, &#39;safe&#39;)
+// =&gt; Full HTML but &lt;a&gt; tags stripped
+</code></pre>
+<h2>The Complete Code</h2>
+<p>Here&#39;s everything together:</p>
+<pre><code class="language-typescript">import { markdown, markdownStrip } from &#39;@motioneffector/markdown&#39;
+
+// User submits markdown content
+const userInput = `
+# Welcome
+
+Check out [my site](https://example.com)!
+
+- Feature **one**
+- Feature *two*
+`
+
+// Convert to HTML (safe by default)
+const html = markdown(userInput)
+
+// Use different outputs for different contexts
+const forDisplay = html                              // Full HTML for articles
+const forChat = markdownStrip(html, &#39;inline&#39;)        // Inline only for messages
+const forNotification = markdownStrip(html, &#39;plaintext&#39;)  // Plain text for alerts
+const forComment = markdownStrip(html, &#39;safe&#39;)       // No links for comments
+
+console.log(&#39;Display:&#39;, forDisplay)
+console.log(&#39;Chat:&#39;, forChat)
+console.log(&#39;Notification:&#39;, forNotification)
+console.log(&#39;Comment:&#39;, forComment)
+</code></pre>
+<h2>What&#39;s Next?</h2>
+<p>Now that you have the basics:</p>
+<ul>
+<li><strong><a href="concept-safety-by-default.html">Understand safety</a></strong> - Learn what protections are applied automatically</li>
+<li><strong><a href="guide-filtering-html-output.html">Filter HTML output</a></strong> - Create custom allowlists for specific needs</li>
+<li><strong><a href="guide-handling-user-input.html">Handle user input</a></strong> - Best practices for user-generated content</li>
+<li><strong><a href="api-parsing.html">Explore the API</a></strong> - Full reference for all options</li>
+</ul>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

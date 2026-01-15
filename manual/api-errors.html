@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Error Types - @motioneffector/markdown</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/markdown</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/markdown" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/markdown" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/markdown</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-markdown-render.html">Your First Markdown Render</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-safety-by-default.html">Safety by Default</a></li>
+<li><a href="concept-gfm-extensions.html">GFM Extensions</a></li>
+<li><a href="concept-strip-presets.html">Strip Presets</a></li>
+<li><a href="concept-custom-tag-filtering.html">Custom Tag Filtering</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-handling-user-input.html">Handling User Input</a></li>
+<li><a href="guide-filtering-html-output.html">Filtering HTML Output</a></li>
+<li><a href="guide-rendering-tables.html">Rendering Tables</a></li>
+<li><a href="guide-configuring-links.html">Configuring Links</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parsing.html">Parsing API</a></li>
+<li><a href="api-stripping.html">Stripping API</a></li>
+<li><a href="api-errors.html">Error Types</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>Error Types</h1>
+<p>Error classes thrown by the library for different failure scenarios.</p>
+<hr>
+<h2><code>MarkdownError</code></h2>
+<p>Base error class for all library errors. Extends the standard <code>Error</code> class.</p>
+<p><strong>Signature:</strong></p>
+<pre><code class="language-typescript">class MarkdownError extends Error {
+  constructor(message: string)
+  name: &#39;MarkdownError&#39;
+}
+</code></pre>
+<p><strong>Example:</strong></p>
+<pre><code class="language-typescript">import { MarkdownError } from &#39;@motioneffector/markdown&#39;
+
+try {
+  // library operation
+} catch (error) {
+  if (error instanceof MarkdownError) {
+    console.log(&#39;Markdown library error:&#39;, error.message)
+  }
+}
+</code></pre>
+<p>Use <code>MarkdownError</code> to catch any error from this library.</p>
+<hr>
+<h2><code>ValidationError</code></h2>
+<p>Thrown when input or configuration validation fails.</p>
+<p><strong>Signature:</strong></p>
+<pre><code class="language-typescript">class ValidationError extends MarkdownError {
+  constructor(message: string, field?: string)
+  name: &#39;ValidationError&#39;
+  field?: string
+}
+</code></pre>
+<p><strong>Properties:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>message</code></td>
+<td><code>string</code></td>
+<td>Description of the validation failure</td>
+</tr>
+<tr>
+<td><code>field</code></td>
+<td><code>string | undefined</code></td>
+<td>Optional name of the invalid field</td>
+</tr>
+</tbody></table>
+<p><strong>Example:</strong></p>
+<pre><code class="language-typescript">import { markdownStrip, ValidationError } from &#39;@motioneffector/markdown&#39;
+
+try {
+  // This throws because both allow and strip are provided
+  markdownStrip(html, { allow: [&#39;p&#39;], strip: [&#39;a&#39;] })
+} catch (error) {
+  if (error instanceof ValidationError) {
+    console.log(&#39;Validation failed:&#39;, error.message)
+    // =&gt; &#39;Cannot use both &quot;allow&quot; and &quot;strip&quot; options&#39;
+  }
+}
+</code></pre>
+<p><strong>Common causes:</strong></p>
+<ul>
+<li>Using both <code>allow</code> and <code>strip</code> options in <code>markdownStrip()</code></li>
+<li>Invalid configuration values</li>
+</ul>
+<hr>
+<h2><code>ParseError</code></h2>
+<p>Thrown when parsing fails due to malformed input.</p>
+<p><strong>Signature:</strong></p>
+<pre><code class="language-typescript">class ParseError extends MarkdownError {
+  constructor(message: string, position?: number, input?: string)
+  name: &#39;ParseError&#39;
+  position?: number
+  input?: string
+}
+</code></pre>
+<p><strong>Properties:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>message</code></td>
+<td><code>string</code></td>
+<td>Description of the parse failure</td>
+</tr>
+<tr>
+<td><code>position</code></td>
+<td><code>number | undefined</code></td>
+<td>Character position where parsing failed</td>
+</tr>
+<tr>
+<td><code>input</code></td>
+<td><code>string | undefined</code></td>
+<td>The input that caused the failure</td>
+</tr>
+</tbody></table>
+<p><strong>Example:</strong></p>
+<pre><code class="language-typescript">import { ParseError } from &#39;@motioneffector/markdown&#39;
+
+try {
+  // parsing operation
+} catch (error) {
+  if (error instanceof ParseError) {
+    console.log(&#39;Parse failed at position&#39;, error.position)
+    console.log(&#39;Input was:&#39;, error.input)
+  }
+}
+</code></pre>
+<p><strong>Note:</strong> The library is designed to handle malformed input gracefully rather than throwing. Parse errors are rare and typically indicate internal issues rather than bad user input.</p>
+<hr>
+<h2>Error Handling Patterns</h2>
+<h3>Catch All Library Errors</h3>
+<pre><code class="language-typescript">import { markdown, MarkdownError } from &#39;@motioneffector/markdown&#39;
+
+function safeRender(input: string): string {
+  try {
+    return markdown(input)
+  } catch (error) {
+    if (error instanceof MarkdownError) {
+      console.error(&#39;Markdown error:&#39;, error.message)
+      return &#39;&#39; // Fallback to empty string
+    }
+    throw error // Re-throw unexpected errors
+  }
+}
+</code></pre>
+<h3>Catch Specific Errors</h3>
+<pre><code class="language-typescript">import { markdownStrip, ValidationError } from &#39;@motioneffector/markdown&#39;
+
+function filterContent(html: string, config: unknown): string {
+  try {
+    return markdownStrip(html, config as any)
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      // Handle configuration errors specifically
+      console.error(&#39;Invalid config:&#39;, error.message)
+      return markdownStrip(html, &#39;plaintext&#39;) // Fallback to plaintext
+    }
+    throw error
+  }
+}
+</code></pre>
+<h3>Type-Safe Error Handling</h3>
+<pre><code class="language-typescript">import { markdown, MarkdownError, ValidationError, ParseError } from &#39;@motioneffector/markdown&#39;
+
+function processMarkdown(input: string): { html: string; error?: string } {
+  try {
+    return { html: markdown(input) }
+  } catch (error) {
+    if (error instanceof ValidationError) {
+      return { html: &#39;&#39;, error: `Invalid input: ${error.message}` }
+    }
+    if (error instanceof ParseError) {
+      return { html: &#39;&#39;, error: `Parse failed: ${error.message}` }
+    }
+    if (error instanceof MarkdownError) {
+      return { html: &#39;&#39;, error: `Markdown error: ${error.message}` }
+    }
+    // Unknown error
+    throw error
+  }
+}
+</code></pre>
+<hr>
+<h2>Error Hierarchy</h2>
+<pre><code>Error (built-in)
+└── MarkdownError
+    ├── ValidationError
+    └── ParseError
+</code></pre>
+<p>All library errors extend <code>MarkdownError</code>, which extends the standard <code>Error</code>. This means:</p>
+<ul>
+<li><code>error instanceof Error</code> catches all errors</li>
+<li><code>error instanceof MarkdownError</code> catches all library errors</li>
+<li><code>error instanceof ValidationError</code> catches only validation errors</li>
+<li><code>error instanceof ParseError</code> catches only parse errors</li>
+</ul>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

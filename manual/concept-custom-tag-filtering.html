@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Custom Tag Filtering - @motioneffector/markdown</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/markdown</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/markdown" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/markdown" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/markdown</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-markdown-render.html">Your First Markdown Render</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-safety-by-default.html">Safety by Default</a></li>
+<li><a href="concept-gfm-extensions.html">GFM Extensions</a></li>
+<li><a href="concept-strip-presets.html">Strip Presets</a></li>
+<li><a href="concept-custom-tag-filtering.html">Custom Tag Filtering</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-handling-user-input.html">Handling User Input</a></li>
+<li><a href="guide-filtering-html-output.html">Filtering HTML Output</a></li>
+<li><a href="guide-rendering-tables.html">Rendering Tables</a></li>
+<li><a href="guide-configuring-links.html">Configuring Links</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parsing.html">Parsing API</a></li>
+<li><a href="api-stripping.html">Stripping API</a></li>
+<li><a href="api-errors.html">Error Types</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>Custom Tag Filtering</h1>
+<p>When presets don&#39;t match your needs, define exactly which tags survive. Use an allowlist to permit only specific tags, or a blocklist to remove specific tags while keeping everything else.</p>
+<h2>How It Works</h2>
+<p>Instead of a preset name, pass a configuration object to <code>markdownStrip()</code>:</p>
+<pre><code class="language-typescript">// Allowlist: only these tags permitted
+markdownStrip(html, { allow: [&#39;p&#39;, &#39;strong&#39;, &#39;em&#39;] })
+
+// Blocklist: these tags removed, others kept
+markdownStrip(html, { strip: [&#39;img&#39;, &#39;a&#39;] })
+</code></pre>
+<p>You can&#39;t use both <code>allow</code> and <code>strip</code> in the same call. Pick one approach.</p>
+<h2>Basic Usage</h2>
+<pre><code class="language-typescript">import { markdown, markdownStrip } from &#39;@motioneffector/markdown&#39;
+
+const html = markdown(`
+# Title
+
+**Bold** with a [link](url) and ![image](img.png).
+
+- List item
+`)
+
+// Allow only paragraph and basic formatting
+const filtered = markdownStrip(html, {
+  allow: [&#39;p&#39;, &#39;strong&#39;, &#39;em&#39;, &#39;ul&#39;, &#39;li&#39;]
+})
+
+// Result: Headings unwrapped, links/images removed, lists preserved
+</code></pre>
+<h2>Key Points</h2>
+<ul>
+<li><strong>Allowlist is exclusive</strong> - Only tags in the <code>allow</code> array survive. Everything else is stripped.</li>
+<li><strong>Blocklist is inclusive</strong> - Only tags in the <code>strip</code> array are removed. Everything else survives.</li>
+<li><strong>Can&#39;t combine both</strong> - Using <code>allow</code> and <code>strip</code> together throws an error. Pick one.</li>
+<li><strong>Dangerous tags always removed</strong> - Scripts, iframes, etc. are removed regardless of your configuration.</li>
+<li><strong>Content preserved by default</strong> - When a tag is stripped, its inner content stays (controlled by <code>unwrap</code>).</li>
+</ul>
+<h2>Examples</h2>
+<h3>Custom Allowlist</h3>
+<pre><code class="language-typescript">import { markdown, markdownStrip } from &#39;@motioneffector/markdown&#39;
+
+const html = markdown(&#39;# Title\n\n**Bold** and `code` here.&#39;)
+
+const result = markdownStrip(html, {
+  allow: [&#39;strong&#39;, &#39;em&#39;]  // Only these survive
+})
+
+// Result: &#39;Title\n\n&lt;strong&gt;Bold&lt;/strong&gt; and code here.&#39;
+// Heading unwrapped, code unwrapped, strong preserved
+</code></pre>
+<h3>Custom Blocklist</h3>
+<pre><code class="language-typescript">import { markdown, markdownStrip } from &#39;@motioneffector/markdown&#39;
+
+const html = markdown(&#39;[Link](url) and **bold** text.&#39;)
+
+const result = markdownStrip(html, {
+  strip: [&#39;a&#39;]  // Only links removed
+})
+
+// Result: &#39;&lt;p&gt;Link and &lt;strong&gt;bold&lt;/strong&gt; text.&lt;/p&gt;&#39;
+// Link tag removed but text kept, everything else preserved
+</code></pre>
+<h3>Removing Content Entirely</h3>
+<p>By default, stripped tags keep their inner content. Use <code>unwrap: false</code> to remove both:</p>
+<pre><code class="language-typescript">import { markdown, markdownStrip } from &#39;@motioneffector/markdown&#39;
+
+const html = markdown(&#39;Text with `code` inline.&#39;)
+
+// Default: unwrap content
+const unwrapped = markdownStrip(html, {
+  strip: [&#39;code&#39;],
+  unwrap: true  // default
+})
+// Result: &#39;&lt;p&gt;Text with code inline.&lt;/p&gt;&#39;
+
+// Remove entirely
+const removed = markdownStrip(html, {
+  strip: [&#39;code&#39;],
+  unwrap: false
+})
+// Result: &#39;&lt;p&gt;Text with  inline.&lt;/p&gt;&#39;
+</code></pre>
+<h3>Extending a Preset&#39;s Logic</h3>
+<p>Presets can&#39;t be modified, but you can replicate and extend:</p>
+<pre><code class="language-typescript">import { markdown, markdownStrip } from &#39;@motioneffector/markdown&#39;
+
+const html = markdown(&#39;# Title\n\n**Bold** [link](url)&#39;)
+
+// &quot;safe&quot; preset allows these, but we also want tables
+const customSafe = markdownStrip(html, {
+  allow: [
+    // Original &quot;safe&quot; tags
+    &#39;p&#39;, &#39;strong&#39;, &#39;em&#39;, &#39;code&#39;, &#39;pre&#39;,
+    &#39;ul&#39;, &#39;ol&#39;, &#39;li&#39;, &#39;blockquote&#39;,
+    &#39;h1&#39;, &#39;h2&#39;, &#39;h3&#39;, &#39;h4&#39;, &#39;h5&#39;, &#39;h6&#39;,
+    // Plus tables
+    &#39;table&#39;, &#39;thead&#39;, &#39;tbody&#39;, &#39;tr&#39;, &#39;th&#39;, &#39;td&#39;
+  ]
+})
+</code></pre>
+<h2>Configuration Options</h2>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>allow</code></td>
+<td><code>string[]</code></td>
+<td>-</td>
+<td>Only these tags permitted</td>
+</tr>
+<tr>
+<td><code>strip</code></td>
+<td><code>string[]</code></td>
+<td>-</td>
+<td>These tags removed</td>
+</tr>
+<tr>
+<td><code>unwrap</code></td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+<td>Keep inner content when stripping</td>
+</tr>
+</tbody></table>
+<h2>Related</h2>
+<ul>
+<li><strong><a href="concept-strip-presets.html">Strip Presets</a></strong> - Built-in presets for common cases</li>
+<li><strong><a href="guide-filtering-html-output.html">Filtering HTML Output</a></strong> - Step-by-step guide</li>
+<li><strong><a href="api-stripping.html">Stripping API</a></strong> - Full API reference</li>
+</ul>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GFM Extensions - @motioneffector/markdown</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/markdown</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/markdown" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/markdown" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/markdown</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-markdown-render.html">Your First Markdown Render</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-safety-by-default.html">Safety by Default</a></li>
+<li><a href="concept-gfm-extensions.html">GFM Extensions</a></li>
+<li><a href="concept-strip-presets.html">Strip Presets</a></li>
+<li><a href="concept-custom-tag-filtering.html">Custom Tag Filtering</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-handling-user-input.html">Handling User Input</a></li>
+<li><a href="guide-filtering-html-output.html">Filtering HTML Output</a></li>
+<li><a href="guide-rendering-tables.html">Rendering Tables</a></li>
+<li><a href="guide-configuring-links.html">Configuring Links</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parsing.html">Parsing API</a></li>
+<li><a href="api-stripping.html">Stripping API</a></li>
+<li><a href="api-errors.html">Error Types</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>GFM Extensions</h1>
+<p>GitHub Flavored Markdown (GFM) adds practical features beyond the CommonMark standard. Tables, strikethrough, task lists, and extended autolinks are all enabled by default because they&#39;re what users expect from a modern markdown parser.</p>
+<h2>How It Works</h2>
+<p>GFM extends CommonMark with syntax that GitHub popularized:</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Syntax</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tables</td>
+<td><code>| A | B |</code></td>
+<td>HTML <code>&lt;table&gt;</code></td>
+</tr>
+<tr>
+<td>Strikethrough</td>
+<td><code>~~text~~</code></td>
+<td><code>&lt;del&gt;text&lt;/del&gt;</code></td>
+</tr>
+<tr>
+<td>Task lists</td>
+<td><code>- [x] Done</code></td>
+<td>Checkbox inputs</td>
+</tr>
+<tr>
+<td>Autolinks</td>
+<td><code>https://...</code></td>
+<td>Clickable links</td>
+</tr>
+</tbody></table>
+<p>These features are part of the GFM specification and widely supported. The library enables them by default to match user expectations.</p>
+<h2>Basic Usage</h2>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+const content = markdown(`
+| Feature | Status |
+|---------|--------|
+| Tables | Done |
+| ~~Old feature~~ | Removed |
+
+- [x] Completed task
+- [ ] Pending task
+
+Visit https://example.com for more.
+`)
+</code></pre>
+<p>All GFM features work automatically.</p>
+<h2>Key Points</h2>
+<ul>
+<li><strong>Enabled by default</strong> - The <code>gfm</code> option is <code>true</code> by default. Most users want these features.</li>
+<li><strong>Safe to disable</strong> - Set <code>gfm: false</code> for strict CommonMark compliance. Tables become paragraphs, strikethrough becomes literal tildes.</li>
+<li><strong>Tables need headers</strong> - GFM tables require a header row and separator row. Rows without headers render as paragraphs.</li>
+<li><strong>Autolinks are smart</strong> - Bare URLs only become links when they start with <code>http://</code>, <code>https://</code>, or <code>www.</code>. Email addresses are also detected.</li>
+</ul>
+<h2>Examples</h2>
+<h3>Tables with Alignment</h3>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+const table = markdown(`
+| Left | Center | Right |
+|:-----|:------:|------:|
+| A    | B      | C     |
+| D    | E      | F     |
+`)
+
+// Produces &lt;table&gt; with text-align styles on cells
+</code></pre>
+<p>The colon position in the separator row controls alignment:</p>
+<ul>
+<li><code>:---</code> = left align</li>
+<li><code>:---:</code> = center align</li>
+<li><code>---:</code> = right align</li>
+</ul>
+<h3>Task Lists</h3>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+const tasks = markdown(`
+- [x] Write documentation
+- [x] Add tests
+- [ ] Release v1.0
+`)
+
+// Produces &lt;ul&gt; with checkbox inputs (disabled by default)
+</code></pre>
+<p>Task list items get the <code>task-list-item</code> class for styling.</p>
+<h3>Strikethrough</h3>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+const content = markdown(&#39;This is ~~wrong~~ correct.&#39;)
+
+// Output: &#39;&lt;p&gt;This is &lt;del&gt;wrong&lt;/del&gt; correct.&lt;/p&gt;&#39;
+</code></pre>
+<h3>Disabling GFM</h3>
+<p>For strict CommonMark compliance:</p>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+const strict = markdown(&#39;| Not | A | Table |&#39;, { gfm: false })
+
+// Output: &#39;&lt;p&gt;| Not | A | Table |&lt;/p&gt;&#39;
+// Table syntax treated as plain text
+</code></pre>
+<h2>Related</h2>
+<ul>
+<li><strong><a href="guide-rendering-tables.html">Rendering Tables</a></strong> - Complete guide to table formatting</li>
+<li><strong><a href="api-parsing.html">Parsing API</a></strong> - Documentation of the <code>gfm</code> option</li>
+<li><strong><a href="concept-safety-by-default.html">Safety by Default</a></strong> - How GFM features interact with sanitization</li>
+</ul>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>
