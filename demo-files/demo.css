@@ -1727,3 +1727,228 @@ textarea.input {
   color: var(--text-secondary);
   font-style: italic;
 }
+
+/* ============================================
+   STANDARDIZED TEST RUNNER STYLES
+   ============================================ */
+
+.test-runner {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  margin-bottom: var(--space-xxl);
+}
+
+.test-runner-header {
+  padding: var(--space-lg);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.test-runner-title {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.test-runner-content {
+  padding: var(--space-lg);
+}
+
+.test-control-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.test-progress {
+  flex: 1;
+  min-width: 200px;
+}
+
+.test-progress-bar {
+  height: 8px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: var(--space-xs);
+}
+
+.test-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent-blue);
+  transition: width var(--transition-fast);
+}
+
+.test-progress-fill.success {
+  background: var(--accent-green);
+}
+
+.test-progress-fill.failure {
+  background: var(--accent-red);
+}
+
+.test-progress-text {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.test-runner-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+}
+
+.btn-icon {
+  font-size: var(--font-size-md);
+  line-height: 1;
+}
+
+.btn-primary {
+  background: var(--accent-blue);
+  color: white;
+  border-color: var(--accent-blue);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-blue-hover);
+  border-color: var(--accent-blue-hover);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border-color: var(--border-default);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+.test-output {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  max-height: 400px;
+  overflow-y: auto;
+  font-size: var(--font-size-sm);
+}
+
+.test-output-placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  padding: var(--space-lg);
+}
+
+.test-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-xs) 0;
+  border-bottom: 1px solid var(--border-muted);
+}
+
+.test-item:last-child {
+  border-bottom: none;
+}
+
+.test-item .test-icon {
+  font-weight: bold;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.test-item .test-icon.pass {
+  color: var(--accent-green-bright);
+}
+
+.test-item .test-icon.fail {
+  color: var(--accent-red-bright);
+}
+
+.test-item .test-name {
+  flex: 1;
+  color: var(--text-primary);
+}
+
+.test-item .test-error {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--accent-red-bright);
+  font-family: var(--font-mono);
+  margin-top: var(--space-xs);
+}
+
+.test-item.demo-phase .test-icon {
+  color: var(--accent-purple);
+}
+
+.test-item.demo-step .test-icon {
+  color: var(--accent-blue);
+}
+
+.test-summary {
+  display: flex;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+}
+
+.test-summary.hidden {
+  display: none;
+}
+
+.test-summary-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-size-sm);
+}
+
+.test-summary-item.passed {
+  color: var(--accent-green-bright);
+}
+
+.test-summary-item.failed {
+  color: var(--accent-red-bright);
+}
+
+/* Integrity test styling */
+.test-name.integrity-test {
+  color: var(--accent-purple);
+  font-weight: 500;
+}
+
+/* Tour active state */
+.tour-active {
+  box-shadow: 0 0 0 3px var(--accent-blue);
+  transition: box-shadow var(--transition-normal);
+}

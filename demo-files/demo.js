@@ -1,6 +1,19 @@
 import { markdown, markdownStrip } from 'https://esm.sh/@motioneffector/markdown@latest'
 
 // ============================================
+// LIBRARY VERIFICATION
+// ============================================
+
+if (typeof markdown === 'undefined' || typeof markdownStrip === 'undefined') {
+  throw new Error(
+    'Library not loaded. Run `pnpm build` first, then serve this directory.'
+  )
+}
+
+// Expose library to window for tests
+window.Library = { markdown, markdownStrip }
+
+// ============================================
 // EXAMPLE DATA
 // ============================================
 
@@ -265,15 +278,6 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
 }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
-
-function scrollToElement(element, offset = 100) {
-  const top = element.getBoundingClientRect().top + window.scrollY - offset
-  window.scrollTo({ top, behavior: 'smooth' })
-}
-
 function getBlockType(tagName) {
   const tag = tagName.toLowerCase()
   if (/^h[1-6]$/.test(tag)) return 'heading'
@@ -336,9 +340,9 @@ function initBlockBuilder() {
     `<button class="example-chip${key === 'kitchen-sink' ? ' active' : ''}" data-example="${key}">${ex.label}</button>`
   ).join('')
 
-  // Set initial content
+  // Set initial content WITHOUT processing it (no auto-play)
   inputEl.value = blockExamples['kitchen-sink'].content
-  updateBlockOutput()
+  // Leave output EMPTY - do not call updateBlockOutput() here
 
   // Example chip clicks
   examplesContainer.addEventListener('click', (e) => {
@@ -377,7 +381,7 @@ function updateBlockOutput() {
 }
 
 // Public function to select a block example (for tour)
-function selectBlockExample(key) {
+window.selectBlockExample = function(key) {
   const examplesContainer = document.getElementById('block-examples')
   const inputEl = document.getElementById('block-input')
   const chip = examplesContainer.querySelector(`[data-example="${key}"]`)
@@ -418,15 +422,14 @@ function initXssAssault() {
     <div class="attack-category">
       <h4 class="category-title">${cat}</h4>
       <div class="attack-buttons">
-        ${items.map((item, i) =>
-          `<button class="attack-btn${cat === 'Injection' && i === 0 ? ' active' : ''}" data-attack="${item.key}">${item.label}</button>`
+        ${items.map(item =>
+          `<button class="attack-btn" data-attack="${item.key}">${item.label}</button>`
         ).join('')}
       </div>
     </div>
   `).join('')
 
-  // Show initial attack
-  showAttack('script-tag')
+  // DO NOT show initial attack - leave empty until user clicks
 
   // Attack button clicks
   categoriesContainer.addEventListener('click', (e) => {
@@ -478,7 +481,7 @@ function showAttack(key) {
 }
 
 // Public function to select an attack (for tour)
-function selectAttack(key) {
+window.selectAttack = function(key) {
   const categoriesContainer = document.getElementById('attack-categories')
   const btn = categoriesContainer.querySelector(`[data-attack="${key}"]`)
 
@@ -511,8 +514,7 @@ function initFilterPipeline() {
     `<button class="preset-btn${key === 'safe' ? ' active' : ''}" data-preset="${key}">${key}</button>`
   ).join('')
 
-  // Initial render
-  updatePipeline()
+  // DO NOT render initially - leave empty until user clicks
 
   // Content chip clicks
   contentContainer.addEventListener('click', (e) => {
@@ -568,7 +570,7 @@ function updatePipeline() {
 }
 
 // Public function to select content (for tour)
-function selectContent(key) {
+window.selectContent = function(key) {
   const contentContainer = document.getElementById('content-examples')
   const chip = contentContainer.querySelector(`[data-content="${key}"]`)
 
@@ -581,7 +583,7 @@ function selectContent(key) {
 }
 
 // Public function to select preset (for tour)
-function selectPreset(key) {
+window.selectPreset = function(key) {
   const presetContainer = document.getElementById('preset-buttons')
   const btn = presetContainer.querySelector(`[data-preset="${key}"]`)
 
@@ -594,468 +596,15 @@ function selectPreset(key) {
 }
 
 // ============================================
-// DEMO TOUR - Automated walkthrough
-// ============================================
-
-let tourRunning = false
-
-async function runDemoTour() {
-  if (tourRunning) return
-  tourRunning = true
-
-  const tourDelay = 400 // Time between each action (human-perceptible)
-
-  // Highlight function
-  function highlight(section) {
-    document.querySelectorAll('.exhibit').forEach(s => s.classList.remove('tour-active'))
-    section.classList.add('tour-active')
-  }
-
-  try {
-    // === EXHIBIT 1: Block Builder ===
-    const blockSection = document.getElementById('block-builder')
-    scrollToElement(blockSection)
-    highlight(blockSection)
-    await sleep(tourDelay)
-
-    // Cycle through block examples
-    const blockKeys = Object.keys(blockExamples)
-    for (const key of blockKeys) {
-      selectBlockExample(key)
-      await sleep(tourDelay)
-    }
-
-    // Toggle GFM off and on
-    const gfmToggle = document.getElementById('opt-gfm')
-    gfmToggle.checked = false
-    gfmToggle.dispatchEvent(new Event('change'))
-    await sleep(tourDelay)
-    gfmToggle.checked = true
-    gfmToggle.dispatchEvent(new Event('change'))
-    await sleep(tourDelay)
-
-    // === EXHIBIT 2: XSS Assault Course ===
-    const xssSection = document.getElementById('xss-assault')
-    scrollToElement(xssSection)
-    highlight(xssSection)
-    await sleep(tourDelay)
-
-    // Fire all attacks
-    const attackKeys = Object.keys(attacks)
-    for (const key of attackKeys) {
-      selectAttack(key)
-      await sleep(tourDelay)
-    }
-
-    // === EXHIBIT 3: Filter Pipeline ===
-    const filterSection = document.getElementById('filter-pipeline')
-    scrollToElement(filterSection)
-    highlight(filterSection)
-    await sleep(tourDelay)
-
-    // Cycle through content examples
-    const contentKeys = Object.keys(contentExamples)
-    for (const key of contentKeys) {
-      selectContent(key)
-      await sleep(tourDelay / 2)
-    }
-
-    // Cycle through presets
-    const presetKeys = Object.keys(presetInfo)
-    for (const key of presetKeys) {
-      selectPreset(key)
-      await sleep(tourDelay)
-    }
-
-    // === Scroll to Test Runner ===
-    const testSection = document.getElementById('test-runner')
-    scrollToElement(testSection)
-    highlight(testSection)
-    await sleep(tourDelay)
-
-  } finally {
-    // Remove highlights
-    document.querySelectorAll('.exhibit').forEach(s => s.classList.remove('tour-active'))
-    tourRunning = false
-  }
-}
-
-// ============================================
-// TEST RUNNER
-// ============================================
-
-const tests = []
-
-function registerTest(name, fn) {
-  tests.push({ name, fn })
-}
-
-async function runTests() {
-  const resultsEl = document.getElementById('test-results')
-  const progressBar = document.getElementById('progress-bar')
-  const passedCount = document.getElementById('passed-count')
-  const failedCount = document.getElementById('failed-count')
-  const totalCount = document.getElementById('total-count')
-  const runBtn = document.getElementById('run-tests')
-
-  runBtn.disabled = true
-  resultsEl.innerHTML = ''
-  progressBar.style.width = '0%'
-
-  let passed = 0
-  let failed = 0
-
-  for (let i = 0; i < tests.length; i++) {
-    const test = tests[i]
-    const progress = ((i + 1) / tests.length) * 100
-    progressBar.style.width = `${progress}%`
-
-    try {
-      await test.fn()
-      passed++
-      resultsEl.innerHTML += `
-        <div class="test-result pass">
-          <span class="test-icon">&#10003;</span>
-          <span class="test-name">${escapeHtml(test.name)}</span>
-        </div>
-      `
-    } catch (e) {
-      failed++
-      resultsEl.innerHTML += `
-        <div class="test-result fail">
-          <span class="test-icon">&#10007;</span>
-          <span class="test-name">${escapeHtml(test.name)}</span>
-          <span class="test-error">${escapeHtml(e.message)}</span>
-        </div>
-      `
-    }
-
-    // Update counts live
-    passedCount.textContent = passed
-    failedCount.textContent = failed
-    totalCount.textContent = i + 1
-
-    // Small delay for visibility
-    await sleep(15)
-  }
-
-  progressBar.classList.toggle('success', failed === 0)
-  progressBar.classList.toggle('failure', failed > 0)
-  runBtn.disabled = false
-}
-
-async function runFuzzTests() {
-  const resultsEl = document.getElementById('test-results')
-  const progressBar = document.getElementById('progress-bar')
-  const passedCount = document.getElementById('passed-count')
-  const failedCount = document.getElementById('failed-count')
-  const totalCount = document.getElementById('total-count')
-  const fuzzBtn = document.getElementById('run-fuzz')
-
-  fuzzBtn.disabled = true
-  resultsEl.innerHTML = '<div class="fuzz-status">Running 1000 fuzz iterations...</div>'
-  progressBar.style.width = '0%'
-  progressBar.classList.remove('success', 'failure')
-
-  const chars = 'abcdefghijklmnopqrstuvwxyz \n#*_`[]()|-<>!@$%^&=+{}\\/'
-  const iterations = 1000
-  let passed = 0
-  let failed = 0
-  const failures = []
-
-  for (let i = 0; i < iterations; i++) {
-    // Generate random input
-    const length = Math.floor(Math.random() * 500) + 1
-    let input = ''
-    for (let j = 0; j < length; j++) {
-      input += chars[Math.floor(Math.random() * chars.length)]
-    }
-
-    try {
-      markdown(input)
-      markdownStrip(markdown(input), 'safe')
-      passed++
-    } catch (e) {
-      failed++
-      if (failures.length < 5) {
-        failures.push({ input: input.substring(0, 100), error: e.message })
-      }
-    }
-
-    // Update progress every 50 iterations
-    if (i % 50 === 0) {
-      progressBar.style.width = `${((i + 1) / iterations) * 100}%`
-      passedCount.textContent = passed
-      failedCount.textContent = failed
-      totalCount.textContent = i + 1
-      await sleep(1)
-    }
-  }
-
-  progressBar.style.width = '100%'
-  passedCount.textContent = passed
-  failedCount.textContent = failed
-  totalCount.textContent = iterations
-
-  if (failed === 0) {
-    progressBar.classList.add('success')
-    resultsEl.innerHTML = `
-      <div class="test-result pass">
-        <span class="test-icon">&#10003;</span>
-        <span class="test-name">All ${iterations} fuzz iterations passed</span>
-      </div>
-    `
-  } else {
-    progressBar.classList.add('failure')
-    resultsEl.innerHTML = failures.map(f => `
-      <div class="test-result fail">
-        <span class="test-icon">&#10007;</span>
-        <span class="test-name">Fuzz failure</span>
-        <span class="test-error">${escapeHtml(f.error)}</span>
-      </div>
-    `).join('')
-  }
-
-  fuzzBtn.disabled = false
-}
-
-// ============================================
-// REGISTER TESTS
-// ============================================
-
-// Basic parsing
-registerTest('converts # to h1', () => {
-  const result = markdown('# Hello')
-  if (!result.includes('<h1>')) throw new Error(`Expected <h1>, got: ${result}`)
-})
-
-registerTest('converts ## to h2', () => {
-  const result = markdown('## World')
-  if (!result.includes('<h2>')) throw new Error(`Expected <h2>`)
-})
-
-registerTest('converts paragraph', () => {
-  const result = markdown('Hello world')
-  if (!result.includes('<p>')) throw new Error(`Expected <p>`)
-})
-
-registerTest('converts **bold**', () => {
-  const result = markdown('**bold**')
-  if (!result.includes('<strong>')) throw new Error(`Expected <strong>`)
-})
-
-registerTest('converts *italic*', () => {
-  const result = markdown('*italic*')
-  if (!result.includes('<em>')) throw new Error(`Expected <em>`)
-})
-
-registerTest('converts `code`', () => {
-  const result = markdown('`code`')
-  if (!result.includes('<code>')) throw new Error(`Expected <code>`)
-})
-
-registerTest('converts [link](url)', () => {
-  const result = markdown('[text](url)')
-  if (!result.includes('<a href="url">')) throw new Error(`Expected link`)
-})
-
-registerTest('converts - list items', () => {
-  const result = markdown('- item')
-  if (!result.includes('<ul>') || !result.includes('<li>')) throw new Error(`Expected list`)
-})
-
-registerTest('converts 1. ordered list', () => {
-  const result = markdown('1. item')
-  if (!result.includes('<ol>') || !result.includes('<li>')) throw new Error(`Expected ordered list`)
-})
-
-registerTest('converts > blockquote', () => {
-  const result = markdown('> quote')
-  if (!result.includes('<blockquote>')) throw new Error(`Expected blockquote`)
-})
-
-registerTest('converts fenced code block', () => {
-  const result = markdown('```\ncode\n```')
-  if (!result.includes('<pre>')) throw new Error(`Expected pre`)
-})
-
-registerTest('converts ---', () => {
-  const result = markdown('---')
-  if (!result.includes('<hr')) throw new Error(`Expected hr`)
-})
-
-// GFM features
-registerTest('converts GFM tables', () => {
-  const result = markdown('| A | B |\n|---|---|\n| 1 | 2 |')
-  if (!result.includes('<table>')) throw new Error(`Expected table`)
-})
-
-registerTest('converts ~~strikethrough~~', () => {
-  const result = markdown('~~deleted~~')
-  if (!result.includes('<del>')) throw new Error(`Expected del`)
-})
-
-registerTest('converts task lists', () => {
-  const result = markdown('- [x] done')
-  if (!result.includes('checked')) throw new Error(`Expected checked`)
-})
-
-registerTest('autolinks URLs', () => {
-  const result = markdown('Visit https://example.com')
-  if (!result.includes('<a href="https://example.com">')) throw new Error(`Expected autolink`)
-})
-
-// Security tests
-registerTest('removes <script> tags', () => {
-  const result = markdown('<script>alert(1)</script>')
-  if (result.includes('<script>')) throw new Error(`Script not removed`)
-})
-
-registerTest('removes onerror handlers', () => {
-  const result = markdown('<img src=x onerror="alert(1)">')
-  if (result.includes('onerror')) throw new Error(`Handler not removed`)
-})
-
-registerTest('blocks javascript: URLs', () => {
-  const result = markdown('[click](javascript:alert(1))')
-  if (result.includes('javascript:')) throw new Error(`JS URL not blocked`)
-})
-
-registerTest('removes <iframe> tags', () => {
-  const result = markdown('<iframe src="evil.com"></iframe>')
-  if (result.includes('<iframe')) throw new Error(`iframe not removed`)
-})
-
-registerTest('removes <style> tags', () => {
-  const result = markdown('<style>body{}</style>')
-  if (result.includes('<style>')) throw new Error(`Style not removed`)
-})
-
-registerTest('blocks data: URLs', () => {
-  const result = markdown('[x](data:text/html,<script>)')
-  if (result.includes('data:')) throw new Error(`Data URL not blocked`)
-})
-
-registerTest('handles nested script attempts', () => {
-  const result = markdown('<scr<script>ipt>alert(1)</script>')
-  if (result.includes('<script>')) throw new Error(`Nested script not blocked`)
-})
-
-// Strip tests
-registerTest('plaintext strips all tags', () => {
-  const html = '<p><strong>Bold</strong></p>'
-  const result = markdownStrip(html, 'plaintext')
-  if (result.includes('<')) throw new Error(`Tags not stripped`)
-})
-
-registerTest('inline preset keeps strong', () => {
-  const html = '<p><strong>Bold</strong></p>'
-  const result = markdownStrip(html, 'inline')
-  if (!result.includes('<strong>')) throw new Error(`Strong stripped`)
-})
-
-registerTest('safe preset blocks links', () => {
-  const html = '<p><a href="url">Link</a></p>'
-  const result = markdownStrip(html, 'safe')
-  if (result.includes('<a')) throw new Error(`Link not stripped`)
-})
-
-registerTest('custom allow config', () => {
-  const html = '<p><strong>Bold</strong><em>Italic</em></p>'
-  const result = markdownStrip(html, { allow: ['strong'] })
-  if (!result.includes('<strong>') || result.includes('<em>')) {
-    throw new Error(`Custom allow failed`)
-  }
-})
-
-// Options tests
-registerTest('gfm:false disables tables', () => {
-  const md = '| A |\n|---|\n| 1 |'
-  const result = markdown(md, { gfm: false })
-  if (result.includes('<table>')) throw new Error(`Table should be disabled`)
-})
-
-registerTest('breaks:true adds br', () => {
-  const result = markdown('Line 1\nLine 2', { breaks: true })
-  if (!result.includes('<br')) throw new Error(`br not added`)
-})
-
-registerTest('linkTarget adds attribute', () => {
-  const result = markdown('[link](url)', { linkTarget: '_blank' })
-  if (!result.includes('target="_blank"')) throw new Error(`Target not added`)
-})
-
-// Edge cases
-registerTest('handles empty input', () => {
-  const result = markdown('')
-  if (result !== '') throw new Error(`Expected empty`)
-})
-
-registerTest('handles nested emphasis', () => {
-  const result = markdown('***bold italic***')
-  if (!result.includes('<strong>') || !result.includes('<em>')) {
-    throw new Error(`Nested emphasis failed`)
-  }
-})
-
-registerTest('handles deeply nested lists', () => {
-  const result = markdown('- a\n  - b\n    - c\n      - d')
-  const liCount = (result.match(/<li>/g) || []).length
-  if (liCount !== 4) throw new Error(`Expected 4 items, got ${liCount}`)
-})
-
-registerTest('escapes code block content', () => {
-  const result = markdown('```\n<script>\n```')
-  if (!result.includes('&lt;script&gt;')) throw new Error(`Code not escaped`)
-})
-
-registerTest('handles reference links', () => {
-  const result = markdown('[text][ref]\n\n[ref]: url')
-  if (!result.includes('<a href="url">')) throw new Error(`Ref link failed`)
-})
-
-registerTest('converts images', () => {
-  const result = markdown('![alt](src)')
-  if (!result.includes('<img')) throw new Error(`Image not created`)
-})
-
-registerTest('handles setext headings', () => {
-  const result = markdown('Heading\n======')
-  if (!result.includes('<h1>')) throw new Error(`Setext heading failed`)
-})
-
-// ============================================
 // INITIALIZATION
 // ============================================
 
-async function runAllTests() {
-  const runBtn = document.getElementById('run-tests')
-  runBtn.disabled = true
-
-  // First run the actual tests
-  runBtn.textContent = 'Running Tests...'
-  await runTests()
-
-  // Then run the demo tour as a visual playback
-  runBtn.textContent = 'Playing Demo...'
-  await runDemoTour()
-
-  runBtn.textContent = 'Run All Tests'
-  runBtn.disabled = false
-}
-
-function resetPage() {
-  window.location.reload()
-}
-
-// Initialize everything
+// Initialize everything WITHOUT auto-play
 document.addEventListener('DOMContentLoaded', () => {
   initBlockBuilder()
   initXssAssault()
   initFilterPipeline()
 
-  // Wire up test runner buttons
-  document.getElementById('run-tests').addEventListener('click', runAllTests)
-  document.getElementById('run-fuzz').addEventListener('click', runFuzzTests)
-  document.getElementById('reset-page').addEventListener('click', resetPage)
+  // Note: Exhibits are initialized with UI elements populated,
+  // but NO library functions are called until user interaction
 })

@@ -4,237 +4,234 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>@motioneffector/markdown - Demo</title>
-  <link rel="stylesheet" href="demo-files/styles.css">
+  <link rel="stylesheet" href="demo-files/demo.css">
 </head>
 <body>
-  <!-- Header -->
-  <header class="demo-header">
-    <div class="header-content">
-      <div class="header-title">
-        <h1>@motioneffector/markdown</h1>
-        <span class="header-badge">Demo</span>
-      </div>
-      <p class="header-tagline">Interactive demonstrations of safe markdown parsing</p>
-      <nav class="header-nav">
-        <a href="#block-builder" class="nav-link">Block Builder</a>
-        <a href="#xss-assault" class="nav-link">XSS Assault Course</a>
-        <a href="#filter-pipeline" class="nav-link">Filter Pipeline</a>
-        <a href="#test-runner" class="nav-link">Test Runner</a>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/markdown</h1>
+      <p class="header-description">Safe, lightweight markdown parsing for TypeScript</p>
+      <nav class="header-links">
+        <a href="https://www.npmjs.com/package/@motioneffector/markdown" class="header-link">📦 npm</a>
+        <a href="https://github.com/motioneffector/markdown" class="header-link">💻 GitHub</a>
+        <a href="https://github.com/motioneffector/markdown/wiki" class="header-link">📖 Manual</a>
       </nav>
-    </div>
-  </header>
+    </header>
 
-  <main class="demo-main">
-    <!-- Exhibit 1: Block Builder -->
-    <section id="block-builder" class="exhibit">
-      <div class="exhibit-header">
-        <div class="exhibit-number">01</div>
-        <h2 class="exhibit-title">Block Builder</h2>
-        <p class="exhibit-description">Visualize how markdown parses into structured blocks. Watch elements stack and transform in real-time as you type or select examples.</p>
-      </div>
-      <div class="exhibit-content">
-        <div class="block-builder-layout">
-          <!-- Examples Gallery -->
-          <div class="examples-gallery">
-            <h3 class="gallery-title">Examples</h3>
-            <div class="example-chips" id="block-examples"></div>
-          </div>
-
-          <!-- Input Panel -->
-          <div class="input-panel">
-            <div class="panel-header">
-              <span class="panel-label">Markdown Input</span>
-              <button class="clear-btn" id="clear-input">Clear</button>
+    <main>
+      <!-- Test Runner (FIRST) -->
+      <section class="test-runner" id="test-runner">
+        <div class="test-runner-header">
+          <h2 class="test-runner-title">Test Runner</h2>
+        </div>
+        <div class="test-runner-content">
+          <!-- Control bar: progress bar + buttons, above output console -->
+          <div class="test-control-bar">
+            <div class="test-progress">
+              <div class="test-progress-bar">
+                <div class="test-progress-fill" id="progress-fill"></div>
+              </div>
+              <div class="test-progress-text" id="progress-text">Ready</div>
             </div>
-            <textarea id="block-input" class="code-input" spellcheck="false" placeholder="Type markdown here..."></textarea>
+            <div class="test-runner-actions">
+              <button class="btn btn-primary" id="run-all-tests">
+                <span class="btn-icon">▶</span>
+                <span>Run All Tests</span>
+              </button>
+              <button class="btn btn-secondary" id="reset-page">
+                <span class="btn-icon">↻</span>
+                <span>Reset Page</span>
+              </button>
+            </div>
+          </div>
+          <!-- Output console below the control bar -->
+          <div class="test-output" id="test-output">
+            <div class="test-output-placeholder">Click "Run All Tests" to execute the test suite and see a live demonstration</div>
+          </div>
+          <div class="test-summary hidden" id="test-summary"></div>
+        </div>
+      </section>
+
+      <!-- Exhibit 1: Block Builder -->
+      <section id="block-builder" class="exhibit">
+        <div class="exhibit-header">
+          <div class="exhibit-number">01</div>
+          <h2 class="exhibit-title">Block Builder</h2>
+          <p class="exhibit-description">Visualize how markdown parses into structured blocks. Watch elements stack and transform in real-time as you type or select examples.</p>
+        </div>
+        <div class="exhibit-content">
+          <div class="block-builder-layout">
+            <!-- Examples Gallery -->
+            <div class="examples-gallery">
+              <h3 class="gallery-title">Examples</h3>
+              <div class="example-chips" id="block-examples"></div>
+            </div>
+
+            <!-- Input Panel -->
+            <div class="input-panel">
+              <div class="panel-header">
+                <span class="panel-label">Markdown Input</span>
+                <button class="clear-btn" id="clear-input">Clear</button>
+              </div>
+              <textarea id="block-input" class="code-input" spellcheck="false" placeholder="Type markdown here..."></textarea>
+            </div>
+
+            <!-- Output Panel -->
+            <div class="output-panel">
+              <div class="panel-header">
+                <span class="panel-label">Parsed Blocks</span>
+                <div class="block-legend">
+                  <span class="legend-item" data-type="heading">H</span>
+                  <span class="legend-item" data-type="paragraph">P</span>
+                  <span class="legend-item" data-type="list">L</span>
+                  <span class="legend-item" data-type="code">C</span>
+                  <span class="legend-item" data-type="blockquote">Q</span>
+                </div>
+              </div>
+              <div id="block-output" class="block-output"></div>
+            </div>
           </div>
 
-          <!-- Output Panel -->
-          <div class="output-panel">
-            <div class="panel-header">
-              <span class="panel-label">Parsed Blocks</span>
-              <div class="block-legend">
-                <span class="legend-item" data-type="heading">H</span>
-                <span class="legend-item" data-type="paragraph">P</span>
-                <span class="legend-item" data-type="list">L</span>
-                <span class="legend-item" data-type="code">C</span>
-                <span class="legend-item" data-type="blockquote">Q</span>
+          <!-- Options -->
+          <div class="options-bar">
+            <label class="option-toggle">
+              <input type="checkbox" id="opt-gfm" checked>
+              <span class="toggle-label">GFM</span>
+            </label>
+            <label class="option-toggle">
+              <input type="checkbox" id="opt-breaks">
+              <span class="toggle-label">Breaks</span>
+            </label>
+            <label class="option-toggle">
+              <input type="checkbox" id="opt-sanitize" checked>
+              <span class="toggle-label">Sanitize</span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Exhibit 2: XSS Assault Course -->
+      <section id="xss-assault" class="exhibit">
+        <div class="exhibit-header">
+          <div class="exhibit-number">02</div>
+          <h2 class="exhibit-title">XSS Assault Course</h2>
+          <p class="exhibit-description">Test the sanitizer against real XSS attack vectors. Every payload is blocked, every exploit neutralized. Click attacks to see them defused.</p>
+        </div>
+        <div class="exhibit-content">
+          <!-- Attack Categories -->
+          <div class="attack-categories" id="attack-categories"></div>
+
+          <!-- Attack Display -->
+          <div class="attack-display">
+            <div class="attack-panel input-attack">
+              <div class="panel-header">
+                <span class="panel-label">Malicious Input</span>
+                <span class="attack-badge" id="attack-name">Select an attack</span>
+              </div>
+              <pre class="attack-code" id="attack-input"></pre>
+            </div>
+
+            <div class="attack-arrow">
+              <span class="arrow-icon"></span>
+              <span class="arrow-label">sanitized</span>
+            </div>
+
+            <div class="attack-panel output-safe">
+              <div class="panel-header">
+                <span class="panel-label">Safe Output</span>
+                <span class="status-badge safe" id="attack-status">Protected</span>
+              </div>
+              <pre class="attack-code" id="attack-output"></pre>
+            </div>
+          </div>
+
+          <!-- Security Stats -->
+          <div class="security-stats">
+            <div class="stat-card">
+              <span class="stat-number" id="attacks-blocked">0</span>
+              <span class="stat-label">Attacks Blocked</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-number" id="vectors-tested">0</span>
+              <span class="stat-label">Vectors Tested</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-number success">100%</span>
+              <span class="stat-label">Protection Rate</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Exhibit 3: Filter Pipeline -->
+      <section id="filter-pipeline" class="exhibit">
+        <div class="exhibit-header">
+          <div class="exhibit-number">03</div>
+          <h2 class="exhibit-title">Filter Pipeline</h2>
+          <p class="exhibit-description">See how markdownStrip transforms content through different presets. Choose what to keep, what to strip, and watch HTML flow through the pipeline.</p>
+        </div>
+        <div class="exhibit-content">
+          <div class="pipeline-layout">
+            <!-- Content Examples -->
+            <div class="content-gallery">
+              <h3 class="gallery-title">Content</h3>
+              <div class="content-chips" id="content-examples"></div>
+            </div>
+
+            <!-- Pipeline Visualization -->
+            <div class="pipeline-flow">
+              <div class="pipeline-stage source">
+                <div class="stage-header">
+                  <span class="stage-number">1</span>
+                  <span class="stage-label">Source HTML</span>
+                </div>
+                <pre class="stage-content" id="pipeline-source"></pre>
+              </div>
+
+              <div class="pipeline-connector">
+                <div class="connector-line"></div>
+                <div class="connector-label" id="pipeline-preset">plaintext</div>
+              </div>
+
+              <div class="pipeline-stage output">
+                <div class="stage-header">
+                  <span class="stage-number">2</span>
+                  <span class="stage-label">Filtered Output</span>
+                </div>
+                <pre class="stage-content" id="pipeline-output"></pre>
               </div>
             </div>
-            <div id="block-output" class="block-output"></div>
-          </div>
-        </div>
 
-        <!-- Options -->
-        <div class="options-bar">
-          <label class="option-toggle">
-            <input type="checkbox" id="opt-gfm" checked>
-            <span class="toggle-label">GFM</span>
-          </label>
-          <label class="option-toggle">
-            <input type="checkbox" id="opt-breaks">
-            <span class="toggle-label">Breaks</span>
-          </label>
-          <label class="option-toggle">
-            <input type="checkbox" id="opt-sanitize" checked>
-            <span class="toggle-label">Sanitize</span>
-          </label>
-        </div>
-      </div>
-    </section>
-
-    <!-- Exhibit 2: XSS Assault Course -->
-    <section id="xss-assault" class="exhibit">
-      <div class="exhibit-header">
-        <div class="exhibit-number">02</div>
-        <h2 class="exhibit-title">XSS Assault Course</h2>
-        <p class="exhibit-description">Test the sanitizer against real XSS attack vectors. Every payload is blocked, every exploit neutralized. Click attacks to see them defused.</p>
-      </div>
-      <div class="exhibit-content">
-        <!-- Attack Categories -->
-        <div class="attack-categories" id="attack-categories"></div>
-
-        <!-- Attack Display -->
-        <div class="attack-display">
-          <div class="attack-panel input-attack">
-            <div class="panel-header">
-              <span class="panel-label">Malicious Input</span>
-              <span class="attack-badge" id="attack-name">Select an attack</span>
+            <!-- Preset Selector -->
+            <div class="preset-selector">
+              <h3 class="selector-title">Presets</h3>
+              <div class="preset-buttons" id="preset-buttons"></div>
             </div>
-            <pre class="attack-code" id="attack-input"></pre>
-          </div>
 
-          <div class="attack-arrow">
-            <span class="arrow-icon"></span>
-            <span class="arrow-label">sanitized</span>
-          </div>
-
-          <div class="attack-panel output-safe">
-            <div class="panel-header">
-              <span class="panel-label">Safe Output</span>
-              <span class="status-badge safe" id="attack-status">Protected</span>
-            </div>
-            <pre class="attack-code" id="attack-output"></pre>
-          </div>
-        </div>
-
-        <!-- Security Stats -->
-        <div class="security-stats">
-          <div class="stat-card">
-            <span class="stat-number" id="attacks-blocked">0</span>
-            <span class="stat-label">Attacks Blocked</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-number" id="vectors-tested">0</span>
-            <span class="stat-label">Vectors Tested</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-number success">100%</span>
-            <span class="stat-label">Protection Rate</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Exhibit 3: Filter Pipeline -->
-    <section id="filter-pipeline" class="exhibit">
-      <div class="exhibit-header">
-        <div class="exhibit-number">03</div>
-        <h2 class="exhibit-title">Filter Pipeline</h2>
-        <p class="exhibit-description">See how markdownStrip transforms content through different presets. Choose what to keep, what to strip, and watch HTML flow through the pipeline.</p>
-      </div>
-      <div class="exhibit-content">
-        <div class="pipeline-layout">
-          <!-- Content Examples -->
-          <div class="content-gallery">
-            <h3 class="gallery-title">Content</h3>
-            <div class="content-chips" id="content-examples"></div>
-          </div>
-
-          <!-- Pipeline Visualization -->
-          <div class="pipeline-flow">
-            <div class="pipeline-stage source">
-              <div class="stage-header">
-                <span class="stage-number">1</span>
-                <span class="stage-label">Source HTML</span>
+            <!-- Preset Info -->
+            <div class="preset-info" id="preset-info">
+              <h4 class="info-title">plaintext</h4>
+              <p class="info-description">Removes all HTML, leaving only text content.</p>
+              <div class="info-tags">
+                <span class="tag kept">Keeps: text only</span>
               </div>
-              <pre class="stage-content" id="pipeline-source"></pre>
-            </div>
-
-            <div class="pipeline-connector">
-              <div class="connector-line"></div>
-              <div class="connector-label" id="pipeline-preset">plaintext</div>
-            </div>
-
-            <div class="pipeline-stage output">
-              <div class="stage-header">
-                <span class="stage-number">2</span>
-                <span class="stage-label">Filtered Output</span>
-              </div>
-              <pre class="stage-content" id="pipeline-output"></pre>
-            </div>
-          </div>
-
-          <!-- Preset Selector -->
-          <div class="preset-selector">
-            <h3 class="selector-title">Presets</h3>
-            <div class="preset-buttons" id="preset-buttons"></div>
-          </div>
-
-          <!-- Preset Info -->
-          <div class="preset-info" id="preset-info">
-            <h4 class="info-title">plaintext</h4>
-            <p class="info-description">Removes all HTML, leaving only text content.</p>
-            <div class="info-tags">
-              <span class="tag kept">Keeps: text only</span>
             </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </main>
 
-    <!-- Test Runner -->
-    <section id="test-runner" class="exhibit test-runner-exhibit">
-      <div class="exhibit-header">
-        <div class="exhibit-number">04</div>
-        <h2 class="exhibit-title">Test Runner</h2>
-        <p class="exhibit-description">Run the full test suite directly in your browser. Verify that the library works correctly across all scenarios.</p>
-      </div>
-      <div class="exhibit-content">
-        <div class="test-controls">
-          <button class="run-btn" id="run-tests">Run All Tests</button>
-          <button class="run-btn secondary" id="run-fuzz">Fuzz Test (1000x)</button>
-          <button class="run-btn reset" id="reset-page">Reset Page</button>
-          <div class="test-progress" id="test-progress">
-            <div class="progress-bar" id="progress-bar"></div>
-          </div>
-        </div>
+    <!-- Footer -->
+    <footer class="demo-footer">
+      <p>@motioneffector/markdown - Safe, lightweight markdown parsing</p>
+    </footer>
+  </div>
 
-        <div class="test-stats">
-          <div class="stat passed">
-            <span class="stat-count" id="passed-count">0</span>
-            <span class="stat-label">Passed</span>
-          </div>
-          <div class="stat failed">
-            <span class="stat-count" id="failed-count">0</span>
-            <span class="stat-label">Failed</span>
-          </div>
-          <div class="stat total">
-            <span class="stat-count" id="total-count">0</span>
-            <span class="stat-label">Total</span>
-          </div>
-        </div>
-
-        <div class="test-results" id="test-results"></div>
-      </div>
-    </section>
-  </main>
-
-  <!-- Footer -->
-  <footer class="demo-footer">
-    <p>@motioneffector/markdown - Safe, lightweight markdown parsing</p>
-  </footer>
-
+  <!-- Library (from ESM CDN) -->
   <script type="module" src="demo-files/demo.js"></script>
+
+  <!-- Demo scripts (order matters) -->
+  <script src="demo-files/test-runner.js"></script>
+  <script src="demo-files/tests.js"></script>
 </body>
 </html>
