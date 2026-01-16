@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Strip Presets - @motioneffector/markdown</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/markdown</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/markdown" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/markdown" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/markdown</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-markdown-render.html">Your First Markdown Render</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-safety-by-default.html">Safety by Default</a></li>
+<li><a href="concept-gfm-extensions.html">GFM Extensions</a></li>
+<li><a href="concept-strip-presets.html">Strip Presets</a></li>
+<li><a href="concept-custom-tag-filtering.html">Custom Tag Filtering</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-handling-user-input.html">Handling User Input</a></li>
+<li><a href="guide-filtering-html-output.html">Filtering HTML Output</a></li>
+<li><a href="guide-rendering-tables.html">Rendering Tables</a></li>
+<li><a href="guide-configuring-links.html">Configuring Links</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parsing.html">Parsing API</a></li>
+<li><a href="api-stripping.html">Stripping API</a></li>
+<li><a href="api-errors.html">Error Types</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>Strip Presets</h1>
+<p>Different contexts need different HTML. A chat message shouldn&#39;t contain <code>&lt;h1&gt;</code> tags. A notification shouldn&#39;t contain any HTML. An article needs full formatting. Strip presets give you ready-made configurations for common scenarios.</p>
+<h2>How It Works</h2>
+<p>The <code>markdownStrip()</code> function takes HTML (or markdown) and filters it through a preset. Each preset defines which tags survive:</p>
+<table>
+<thead>
+<tr>
+<th>Preset</th>
+<th>Allowed Tags</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>plaintext</code></td>
+<td>None</td>
+<td>Search indexing, notifications, excerpts</td>
+</tr>
+<tr>
+<td><code>inline</code></td>
+<td><code>strong</code>, <code>em</code>, <code>code</code>, <code>a</code>, <code>br</code></td>
+<td>Chat messages, comments, inline content</td>
+</tr>
+<tr>
+<td><code>safe</code></td>
+<td>Block elements, no links/images</td>
+<td>User comments, forum posts</td>
+</tr>
+<tr>
+<td><code>prose</code></td>
+<td>Rich text, no code blocks</td>
+<td>Articles, blog posts, emails</td>
+</tr>
+</tbody></table>
+<p>Presets are shortcuts. Use them when they match your needs, or define <a href="concept-custom-tag-filtering.html">custom filtering</a> when they don&#39;t.</p>
+<h2>Basic Usage</h2>
+<pre><code class="language-typescript">import { markdown, markdownStrip } from &#39;@motioneffector/markdown&#39;
+
+const html = markdown(`
+# Title
+
+**Bold** and *italic* with a [link](url).
+
+\`\`\`
+code block
+\`\`\`
+`)
+
+// Different outputs for different contexts
+const plain = markdownStrip(html, &#39;plaintext&#39;)  // No HTML at all
+const chat = markdownStrip(html, &#39;inline&#39;)      // Only inline elements
+const comment = markdownStrip(html, &#39;safe&#39;)     // Blocks but no links
+const article = markdownStrip(html, &#39;prose&#39;)    // Rich text, no code
+</code></pre>
+<h2>Key Points</h2>
+<ul>
+<li><strong>Markdown or HTML input</strong> - <code>markdownStrip()</code> accepts either. Markdown is converted first, then filtered.</li>
+<li><strong>Content preserved by default</strong> - When a tag is stripped, its content stays. <code>&lt;h1&gt;Title&lt;/h1&gt;</code> becomes <code>Title</code>, not empty.</li>
+<li><strong>Dangerous tags always removed</strong> - Scripts, iframes, and other dangerous elements are removed regardless of preset.</li>
+<li><strong>Presets are immutable</strong> - You can&#39;t modify a preset. Use custom filtering for variations.</li>
+</ul>
+<h2>Examples</h2>
+<h3>Plaintext for Search Indexing</h3>
+<pre><code class="language-typescript">import { markdown, markdownStrip } from &#39;@motioneffector/markdown&#39;
+
+const html = markdown(&#39;# Product\n\n**Best** widget for your needs.&#39;)
+const searchText = markdownStrip(html, &#39;plaintext&#39;)
+
+// Result: &#39;Product\n\nBest widget for your needs.&#39;
+// Perfect for full-text search indexing
+</code></pre>
+<h3>Inline for Chat Messages</h3>
+<pre><code class="language-typescript">import { markdown, markdownStrip } from &#39;@motioneffector/markdown&#39;
+
+const html = markdown(&#39;# Hello\n\nThis is **important**!&#39;)
+const chatHtml = markdownStrip(html, &#39;inline&#39;)
+
+// Result: &#39;Hello\n\nThis is &lt;strong&gt;important&lt;/strong&gt;!&#39;
+// Headings stripped, bold preserved
+</code></pre>
+<h3>Safe for User Comments</h3>
+<pre><code class="language-typescript">import { markdown, markdownStrip } from &#39;@motioneffector/markdown&#39;
+
+const html = markdown(&#39;Check [this](http://spam.com)!\n\n**Great** product.&#39;)
+const commentHtml = markdownStrip(html, &#39;safe&#39;)
+
+// Result: &#39;&lt;p&gt;Check this!&lt;/p&gt;\n&lt;p&gt;&lt;strong&gt;Great&lt;/strong&gt; product.&lt;/p&gt;&#39;
+// Links removed (spam prevention), formatting preserved
+</code></pre>
+<h3>Prose for Articles</h3>
+<pre><code class="language-typescript">import { markdown, markdownStrip } from &#39;@motioneffector/markdown&#39;
+
+const html = markdown(&#39;# Title\n\n```js\ncode\n```\n\nRead [more](url).&#39;)
+const articleHtml = markdownStrip(html, &#39;prose&#39;)
+
+// Result: &#39;&lt;h1&gt;Title&lt;/h1&gt;\n&lt;p&gt;code&lt;/p&gt;\n&lt;p&gt;Read &lt;a href=&quot;url&quot;&gt;more&lt;/a&gt;.&lt;/p&gt;&#39;
+// Code blocks stripped (they need special rendering), links preserved
+</code></pre>
+<h2>Preset Details</h2>
+<h3>plaintext</h3>
+<p>Removes all HTML tags. Output is pure text with whitespace preserved.</p>
+<p>Allowed: Nothing</p>
+<h3>inline</h3>
+<p>Keeps only inline formatting elements.</p>
+<p>Allowed: <code>strong</code>, <code>em</code>, <code>code</code>, <code>a</code>, <code>br</code></p>
+<h3>safe</h3>
+<p>Keeps structural elements but removes links and images (common attack vectors).</p>
+<p>Allowed: <code>p</code>, <code>strong</code>, <code>em</code>, <code>code</code>, <code>pre</code>, <code>ul</code>, <code>ol</code>, <code>li</code>, <code>blockquote</code>, <code>h1</code>-<code>h6</code></p>
+<h3>prose</h3>
+<p>Keeps rich text suitable for articles but removes code blocks (which typically need syntax highlighting).</p>
+<p>Allowed: <code>p</code>, <code>strong</code>, <code>em</code>, <code>a</code>, <code>blockquote</code>, <code>h1</code>-<code>h6</code>, <code>ul</code>, <code>ol</code>, <code>li</code>, <code>br</code></p>
+<h2>Related</h2>
+<ul>
+<li><strong><a href="concept-custom-tag-filtering.html">Custom Tag Filtering</a></strong> - Create your own allowlists</li>
+<li><strong><a href="guide-filtering-html-output.html">Filtering HTML Output</a></strong> - Step-by-step filtering guide</li>
+<li><strong><a href="api-stripping.html">Stripping API</a></strong> - Full API documentation</li>
+</ul>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

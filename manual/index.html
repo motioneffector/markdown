@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>@motioneffector/markdown - @motioneffector/markdown</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/markdown</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/markdown" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/markdown" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/markdown</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-markdown-render.html">Your First Markdown Render</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-safety-by-default.html">Safety by Default</a></li>
+<li><a href="concept-gfm-extensions.html">GFM Extensions</a></li>
+<li><a href="concept-strip-presets.html">Strip Presets</a></li>
+<li><a href="concept-custom-tag-filtering.html">Custom Tag Filtering</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-handling-user-input.html">Handling User Input</a></li>
+<li><a href="guide-filtering-html-output.html">Filtering HTML Output</a></li>
+<li><a href="guide-rendering-tables.html">Rendering Tables</a></li>
+<li><a href="guide-configuring-links.html">Configuring Links</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parsing.html">Parsing API</a></li>
+<li><a href="api-stripping.html">Stripping API</a></li>
+<li><a href="api-errors.html">Error Types</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>@motioneffector/markdown</h1>
+<p>A safe-by-default markdown parser that converts user content to HTML without worrying about XSS attacks. You don&#39;t need to configure security settings, sanitize input, or learn about attack vectors. Just convert markdown and render the result. The library handles CommonMark and GitHub Flavored Markdown out of the box, with flexible output filtering when you need different HTML for different contexts.</p>
+<h2>I want to...</h2>
+<table>
+<thead>
+<tr>
+<th>Goal</th>
+<th>Where to go</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Get up and running quickly</td>
+<td><a href="your-first-markdown-render.html">Your First Markdown Render</a></td>
+</tr>
+<tr>
+<td>Understand how safety works</td>
+<td><a href="concept-safety-by-default.html">Safety by Default</a></td>
+</tr>
+<tr>
+<td>Allow only certain HTML tags</td>
+<td><a href="guide-filtering-html-output.html">Filtering HTML Output</a></td>
+</tr>
+<tr>
+<td>Render user content safely</td>
+<td><a href="guide-handling-user-input.html">Handling User Input</a></td>
+</tr>
+<tr>
+<td>Enable/disable GFM features</td>
+<td><a href="concept-gfm-extensions.html">GFM Extensions</a></td>
+</tr>
+<tr>
+<td>Look up a specific method</td>
+<td><a href="api-parsing.html">API Reference</a></td>
+</tr>
+</tbody></table>
+<h2>Key Concepts</h2>
+<h3>Safety by Default</h3>
+<p>The library assumes all input is hostile. Scripts, iframes, event handlers, and dangerous URL schemes are automatically removed. You get safe HTML without any configuration.</p>
+<h3>Parsing vs Stripping</h3>
+<p>Two functions handle different needs: <code>markdown()</code> converts markdown to HTML, while <code>markdownStrip()</code> filters which HTML tags survive in the output. Use parsing for conversion, stripping for context-specific output.</p>
+<h3>Strip Presets</h3>
+<p>Four built-in presets control HTML output: <code>plaintext</code> for search indexing, <code>inline</code> for chat messages, <code>safe</code> for user comments, and <code>prose</code> for rich articles. Pick a preset or define custom rules.</p>
+<h2>Quick Example</h2>
+<pre><code class="language-typescript">import { markdown, markdownStrip } from &#39;@motioneffector/markdown&#39;
+
+// Convert markdown to safe HTML
+const html = markdown(&#39;# Hello **world**!&#39;)
+// =&gt; &#39;&lt;h1&gt;Hello &lt;strong&gt;world&lt;/strong&gt;!&lt;/h1&gt;&#39;
+
+// Strip to plain text for notifications
+const plain = markdownStrip(html, &#39;plaintext&#39;)
+// =&gt; &#39;Hello world!&#39;
+
+// Allow only inline formatting for comments
+const comment = markdownStrip(html, &#39;inline&#39;)
+// =&gt; &#39;Hello &lt;strong&gt;world&lt;/strong&gt;!&#39;
+</code></pre>
+<hr>
+<p><strong><a href="api-parsing.html">Full API Reference →</a></strong></p>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

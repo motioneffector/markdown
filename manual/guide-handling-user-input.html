@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Handling User Input - @motioneffector/markdown</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/markdown</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/markdown" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/markdown" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/markdown</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-markdown-render.html">Your First Markdown Render</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-safety-by-default.html">Safety by Default</a></li>
+<li><a href="concept-gfm-extensions.html">GFM Extensions</a></li>
+<li><a href="concept-strip-presets.html">Strip Presets</a></li>
+<li><a href="concept-custom-tag-filtering.html">Custom Tag Filtering</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-handling-user-input.html">Handling User Input</a></li>
+<li><a href="guide-filtering-html-output.html">Filtering HTML Output</a></li>
+<li><a href="guide-rendering-tables.html">Rendering Tables</a></li>
+<li><a href="guide-configuring-links.html">Configuring Links</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parsing.html">Parsing API</a></li>
+<li><a href="api-stripping.html">Stripping API</a></li>
+<li><a href="api-errors.html">Error Types</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>Handling User Input</h1>
+<p>Accept markdown from users and render it safely for different contexts. This guide covers the complete flow from receiving input to displaying output.</p>
+<h2>Prerequisites</h2>
+<p>Before starting, you should:</p>
+<ul>
+<li><a href="installation.html">Install the library</a></li>
+<li><a href="your-first-markdown-render.html">Complete the first render tutorial</a></li>
+</ul>
+<h2>Overview</h2>
+<p>We&#39;ll handle user input safely by:</p>
+<ol>
+<li>Receiving markdown from the user</li>
+<li>Converting with default safe settings</li>
+<li>Applying context-appropriate filtering</li>
+<li>Storing and displaying the result</li>
+</ol>
+<h2>Step 1: Receive User Input</h2>
+<p>Accept markdown from any source: form fields, API requests, database records.</p>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+// From a form submission
+const userMarkdown = formData.get(&#39;content&#39;) as string
+
+// From an API request
+const userMarkdown = requestBody.content
+
+// From database
+const userMarkdown = post.rawContent
+</code></pre>
+<p>Don&#39;t sanitize or validate at this stage. The library handles that.</p>
+<h2>Step 2: Convert to Safe HTML</h2>
+<p>Call <code>markdown()</code> with default options. Safety is enabled automatically.</p>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+function processUserContent(input: string): string {
+  // Safe by default - no configuration needed
+  return markdown(input)
+}
+
+const safeHtml = processUserContent(userMarkdown)
+</code></pre>
+<p>The output is safe to store and render. Scripts, event handlers, and dangerous URLs are already removed.</p>
+<h2>Step 3: Apply Context Filtering</h2>
+<p>Different contexts need different HTML. Use <code>markdownStrip()</code> for context-specific output.</p>
+<pre><code class="language-typescript">import { markdown, markdownStrip } from &#39;@motioneffector/markdown&#39;
+
+function processForContext(
+  input: string,
+  context: &#39;article&#39; | &#39;comment&#39; | &#39;chat&#39; | &#39;notification&#39;
+): string {
+  const html = markdown(input)
+
+  switch (context) {
+    case &#39;article&#39;:
+      return html  // Full HTML for articles
+    case &#39;comment&#39;:
+      return markdownStrip(html, &#39;safe&#39;)  // No links/images
+    case &#39;chat&#39;:
+      return markdownStrip(html, &#39;inline&#39;)  // Inline only
+    case &#39;notification&#39;:
+      return markdownStrip(html, &#39;plaintext&#39;)  // No HTML
+  }
+}
+</code></pre>
+<h2>Step 4: Store and Display</h2>
+<p>Store the appropriate version for your use case.</p>
+<pre><code class="language-typescript">import { markdown, markdownStrip } from &#39;@motioneffector/markdown&#39;
+
+// Store both for flexibility
+interface ProcessedContent {
+  raw: string      // Original markdown
+  html: string     // Full safe HTML
+  plain: string    // For search/notifications
+}
+
+function processContent(rawMarkdown: string): ProcessedContent {
+  const html = markdown(rawMarkdown)
+  return {
+    raw: rawMarkdown,
+    html,
+    plain: markdownStrip(html, &#39;plaintext&#39;)
+  }
+}
+</code></pre>
+<h2>Complete Example</h2>
+<pre><code class="language-typescript">import { markdown, markdownStrip } from &#39;@motioneffector/markdown&#39;
+
+// User content processor for a forum
+interface ForumPost {
+  id: string
+  authorId: string
+  rawContent: string
+  htmlContent: string
+  plainContent: string
+  createdAt: Date
+}
+
+function createForumPost(authorId: string, content: string): ForumPost {
+  // Convert markdown to safe HTML
+  const htmlContent = markdown(content)
+
+  // Generate plain text for search indexing
+  const plainContent = markdownStrip(htmlContent, &#39;plaintext&#39;)
+
+  return {
+    id: generateId(),
+    authorId,
+    rawContent: content,
+    htmlContent,
+    plainContent,
+    createdAt: new Date()
+  }
+}
+
+// Display in different contexts
+function renderPost(post: ForumPost, context: &#39;full&#39; | &#39;preview&#39; | &#39;notification&#39;) {
+  switch (context) {
+    case &#39;full&#39;:
+      return post.htmlContent
+    case &#39;preview&#39;:
+      return markdownStrip(post.htmlContent, &#39;inline&#39;).slice(0, 200) + &#39;...&#39;
+    case &#39;notification&#39;:
+      return post.plainContent.slice(0, 100) + &#39;...&#39;
+  }
+}
+</code></pre>
+<h2>Variations</h2>
+<h3>Comments with Link Removal</h3>
+<p>Prevent link spam in comments:</p>
+<pre><code class="language-typescript">import { markdown, markdownStrip } from &#39;@motioneffector/markdown&#39;
+
+function processComment(input: string): string {
+  const html = markdown(input)
+  return markdownStrip(html, &#39;safe&#39;)  // Removes &lt;a&gt; and &lt;img&gt; tags
+}
+</code></pre>
+<h3>Chat Messages with Inline Only</h3>
+<p>Keep messages simple:</p>
+<pre><code class="language-typescript">import { markdown, markdownStrip } from &#39;@motioneffector/markdown&#39;
+
+function processChatMessage(input: string): string {
+  const html = markdown(input)
+  return markdownStrip(html, &#39;inline&#39;)  // Only bold, italic, code, links
+}
+</code></pre>
+<h3>Email-Safe Content</h3>
+<p>Generate content safe for HTML emails:</p>
+<pre><code class="language-typescript">import { markdown, markdownStrip } from &#39;@motioneffector/markdown&#39;
+
+function processEmailContent(input: string): string {
+  const html = markdown(input)
+  return markdownStrip(html, &#39;prose&#39;)  // Rich text, no code blocks
+}
+</code></pre>
+<h2>Troubleshooting</h2>
+<h3>Content Appears Escaped</h3>
+<p><strong>Symptom:</strong> You see <code>&amp;lt;p&amp;gt;</code> instead of rendered HTML.</p>
+<p><strong>Cause:</strong> Double-escaping. The HTML is being escaped again during rendering.</p>
+<p><strong>Solution:</strong> Ensure your templating engine knows the content is safe HTML. In React, use <code>dangerouslySetInnerHTML</code>. In Vue, use <code>v-html</code>.</p>
+<h3>Links Missing from Output</h3>
+<p><strong>Symptom:</strong> Link text appears but not as clickable links.</p>
+<p><strong>Cause:</strong> You&#39;re using the <code>safe</code> preset, which removes links.</p>
+<p><strong>Solution:</strong> Use a different preset or custom allowlist that includes <code>a</code>.</p>
+<h3>Line Breaks Not Working</h3>
+<p><strong>Symptom:</strong> Single line breaks in markdown appear as spaces.</p>
+<p><strong>Cause:</strong> CommonMark requires two spaces + newline or backslash + newline for hard breaks.</p>
+<p><strong>Solution:</strong> Enable the <code>breaks</code> option: <code>markdown(input, { breaks: true })</code>.</p>
+<h2>See Also</h2>
+<ul>
+<li><strong><a href="concept-safety-by-default.html">Safety by Default</a></strong> - How protection works</li>
+<li><strong><a href="concept-strip-presets.html">Strip Presets</a></strong> - Available presets explained</li>
+<li><strong><a href="guide-filtering-html-output.html">Filtering HTML Output</a></strong> - Custom filtering options</li>
+<li><strong><a href="api-parsing.html">Parsing API</a></strong> - Full function reference</li>
+</ul>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

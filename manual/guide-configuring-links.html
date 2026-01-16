@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuring Links - @motioneffector/markdown</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/markdown</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/markdown" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/markdown" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/markdown</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-markdown-render.html">Your First Markdown Render</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-safety-by-default.html">Safety by Default</a></li>
+<li><a href="concept-gfm-extensions.html">GFM Extensions</a></li>
+<li><a href="concept-strip-presets.html">Strip Presets</a></li>
+<li><a href="concept-custom-tag-filtering.html">Custom Tag Filtering</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-handling-user-input.html">Handling User Input</a></li>
+<li><a href="guide-filtering-html-output.html">Filtering HTML Output</a></li>
+<li><a href="guide-rendering-tables.html">Rendering Tables</a></li>
+<li><a href="guide-configuring-links.html">Configuring Links</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parsing.html">Parsing API</a></li>
+<li><a href="api-stripping.html">Stripping API</a></li>
+<li><a href="api-errors.html">Error Types</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>Configuring Links</h1>
+<p>Customize how links are rendered. Open links in new tabs, use reference-style definitions, and understand URL sanitization.</p>
+<h2>Prerequisites</h2>
+<p>Before starting, you should:</p>
+<ul>
+<li><a href="your-first-markdown-render.html">Know the basics of markdown conversion</a></li>
+<li><a href="concept-safety-by-default.html">Understand safety features</a></li>
+</ul>
+<h2>Overview</h2>
+<p>We&#39;ll configure links by:</p>
+<ol>
+<li>Setting the target attribute</li>
+<li>Using reference-style links</li>
+<li>Understanding autolinks</li>
+</ol>
+<h2>Step 1: Set Link Target</h2>
+<p>Make links open in new tabs with the <code>linkTarget</code> option.</p>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+const html = markdown(&#39;[Visit site](https://example.com)&#39;, {
+  linkTarget: &#39;_blank&#39;
+})
+
+// Output: &#39;&lt;p&gt;&lt;a href=&quot;https://example.com&quot; target=&quot;_blank&quot;&gt;Visit site&lt;/a&gt;&lt;/p&gt;&#39;
+</code></pre>
+<p>Common target values:</p>
+<ul>
+<li><code>_blank</code> - Opens in new tab</li>
+<li><code>_self</code> - Opens in same frame (default browser behavior)</li>
+<li><code>_parent</code> - Opens in parent frame</li>
+<li><code>_top</code> - Opens in full body of window</li>
+</ul>
+<h2>Step 2: Use Reference-Style Links</h2>
+<p>Define URLs once and reference them throughout the document.</p>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+const doc = markdown(`
+Check out [our homepage][home] for more info.
+
+Read the [documentation][docs] to get started.
+
+[home]: https://example.com
+[docs]: https://example.com/docs &quot;Documentation&quot;
+`)
+</code></pre>
+<p>Reference definitions:</p>
+<ul>
+<li><code>[ref]: url</code> - Basic definition</li>
+<li><code>[ref]: url &quot;title&quot;</code> - With title attribute</li>
+</ul>
+<p>References are case-insensitive and can be defined anywhere in the document.</p>
+<h2>Step 3: Understand Autolinks</h2>
+<p>GFM automatically links bare URLs and email addresses.</p>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+const html = markdown(`
+Visit https://example.com for info.
+
+Contact support@example.com for help.
+
+Check www.example.com too.
+`)
+
+// URLs and emails become clickable links automatically
+</code></pre>
+<p>Autolinks only work when:</p>
+<ul>
+<li>URL starts with <code>http://</code>, <code>https://</code>, or <code>www.</code></li>
+<li>Email matches standard format</li>
+<li>GFM is enabled (default)</li>
+</ul>
+<h2>Complete Example</h2>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+const article = markdown(`
+# Welcome to Our Site
+
+Visit [our blog][blog] for the latest updates.
+
+For support, email support@example.com or check https://help.example.com.
+
+## Links
+
+- [Home][home]
+- [About](./about &quot;About Us&quot;)
+- [Contact](mailto:hello@example.com)
+
+[blog]: https://blog.example.com &quot;Our Blog&quot;
+[home]: https://example.com
+`, {
+  linkTarget: &#39;_blank&#39;
+})
+
+// All links open in new tabs
+// Reference links resolved
+// Bare URLs and emails linked automatically
+</code></pre>
+<h2>Variations</h2>
+<h3>External Links Only in New Tab</h3>
+<p>Apply target only to external links (requires post-processing):</p>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+// First render without target
+let html = markdown(&#39;[Local](./about) and [External](https://other.com)&#39;)
+
+// Then add target to external links
+html = html.replace(
+  /&lt;a href=&quot;(https?:\/\/[^&quot;]+)&quot;&gt;/g,
+  &#39;&lt;a href=&quot;$1&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;&#39;
+)
+</code></pre>
+<h3>Links with Titles</h3>
+<p>Add tooltip text to links:</p>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+const html = markdown(&#39;[Hover me](https://example.com &quot;This is the title&quot;)&#39;)
+
+// Output includes: title=&quot;This is the title&quot;
+</code></pre>
+<h3>Angle Bracket URLs</h3>
+<p>URLs with special characters can use angle brackets:</p>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+const html = markdown(&#39;[Link](&lt;https://example.com/path with spaces&gt;)&#39;)
+
+// Angle brackets protect the URL from markdown parsing
+</code></pre>
+<h2>Troubleshooting</h2>
+<h3>Link Not Rendering</h3>
+<p><strong>Symptom:</strong> Link appears as plain text <code>[text](url)</code>.</p>
+<p><strong>Cause:</strong> Malformed syntax or dangerous URL.</p>
+<p><strong>Solution:</strong> Check that:</p>
+<ul>
+<li>No space between <code>]</code> and <code>(</code></li>
+<li>URL doesn&#39;t use <code>javascript:</code> or <code>data:</code> scheme</li>
+<li>Reference is defined (for reference-style links)</li>
+</ul>
+<h3>Dangerous URL Stripped</h3>
+<p><strong>Symptom:</strong> Link text appears but not as a link.</p>
+<p><strong>Cause:</strong> URL uses a dangerous scheme.</p>
+<p><strong>Solution:</strong> Use safe URL schemes (<code>http:</code>, <code>https:</code>, <code>mailto:</code>). Dangerous schemes are blocked intentionally. See <a href="concept-safety-by-default.html">Safety by Default</a>.</p>
+<h3>Reference Link Not Found</h3>
+<p><strong>Symptom:</strong> Reference-style link appears as literal text.</p>
+<p><strong>Cause:</strong> Reference definition is missing or misspelled.</p>
+<p><strong>Solution:</strong> Ensure the reference is defined somewhere in the document. References are case-insensitive, so <code>[Home]</code> matches <code>[home]: url</code>.</p>
+<h3>Autolinks Not Working</h3>
+<p><strong>Symptom:</strong> Bare URLs appear as text, not links.</p>
+<p><strong>Cause:</strong> GFM disabled or URL format not recognized.</p>
+<p><strong>Solution:</strong> Ensure <code>gfm: true</code> (default) and URL starts with <code>http://</code>, <code>https://</code>, or <code>www.</code>.</p>
+<h2>See Also</h2>
+<ul>
+<li><strong><a href="concept-safety-by-default.html">Safety by Default</a></strong> - URL sanitization details</li>
+<li><strong><a href="concept-gfm-extensions.html">GFM Extensions</a></strong> - Autolink behavior</li>
+<li><strong><a href="api-parsing.html">Parsing API</a></strong> - The <code>linkTarget</code> option</li>
+</ul>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

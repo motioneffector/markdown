@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Safety by Default - @motioneffector/markdown</title>
+  <link rel="stylesheet" href="../demo-files/demo.css">
+  <link rel="stylesheet" href="manual.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());</script>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="header-title">@motioneffector/markdown</h1>
+      <p class="header-description">Documentation</p>
+      <nav class="header-links">
+        <a href="../index.html" class="header-link">Demo</a>
+        <a href="https://www.npmjs.com/package/@motioneffector/markdown" class="header-link">npm</a>
+        <a href="https://github.com/motioneffector/markdown" class="header-link">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="manual-layout">
+      <aside class="manual-sidebar">
+        <nav class="sidebar-nav">
+<p><strong><a href="index.html">@motioneffector/markdown</a></strong></p>
+<p><strong>Getting Started</strong></p>
+<ul>
+<li><a href="installation.html">Installation</a></li>
+<li><a href="your-first-markdown-render.html">Your First Markdown Render</a></li>
+</ul>
+<p><strong>Core Concepts</strong></p>
+<ul>
+<li><a href="concept-safety-by-default.html">Safety by Default</a></li>
+<li><a href="concept-gfm-extensions.html">GFM Extensions</a></li>
+<li><a href="concept-strip-presets.html">Strip Presets</a></li>
+<li><a href="concept-custom-tag-filtering.html">Custom Tag Filtering</a></li>
+</ul>
+<p><strong>Guides</strong></p>
+<ul>
+<li><a href="guide-handling-user-input.html">Handling User Input</a></li>
+<li><a href="guide-filtering-html-output.html">Filtering HTML Output</a></li>
+<li><a href="guide-rendering-tables.html">Rendering Tables</a></li>
+<li><a href="guide-configuring-links.html">Configuring Links</a></li>
+</ul>
+<p><strong>API Reference</strong></p>
+<ul>
+<li><a href="api-parsing.html">Parsing API</a></li>
+<li><a href="api-stripping.html">Stripping API</a></li>
+<li><a href="api-errors.html">Error Types</a></li>
+</ul>
+
+        </nav>
+      </aside>
+
+      <main class="manual-content">
+        <article class="manual-article">
+<h1>Safety by Default</h1>
+<p>The library treats all input as potentially hostile. Every feature that could enable cross-site scripting (XSS) is disabled or sanitized automatically. You don&#39;t need to configure anything to get safe output.</p>
+<h2>How It Works</h2>
+<p>When you call <code>markdown()</code>, the parser runs several security layers:</p>
+<ol>
+<li><strong>Dangerous tags removed</strong> - <code>&lt;script&gt;</code>, <code>&lt;style&gt;</code>, <code>&lt;iframe&gt;</code>, <code>&lt;object&gt;</code>, <code>&lt;embed&gt;</code> are stripped entirely</li>
+<li><strong>Event handlers removed</strong> - Attributes like <code>onclick</code>, <code>onerror</code>, <code>onload</code> are stripped</li>
+<li><strong>Dangerous URLs blocked</strong> - <code>javascript:</code>, <code>data:</code>, and other dangerous schemes are neutralized</li>
+<li><strong>HTML entities decoded safely</strong> - Numeric entities are converted without enabling injection</li>
+</ol>
+<p>This happens before you receive the output. There&#39;s no &quot;unsafe mode&quot; you might accidentally enable.</p>
+<h2>Basic Usage</h2>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+// Malicious input from user
+const userInput = `
+Check this out: &lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;
+
+Click &lt;a href=&quot;javascript:stealData()&quot;&gt;here&lt;/a&gt;
+
+&lt;img src=&quot;x&quot; onerror=&quot;malicious()&quot;&gt;
+`
+
+const html = markdown(userInput)
+// Scripts removed, javascript: URLs neutralized, event handlers stripped
+// Safe to render directly
+</code></pre>
+<p>The output contains only safe HTML elements with safe attributes.</p>
+<h2>Key Points</h2>
+<ul>
+<li><strong>Enabled by default</strong> - The <code>sanitize</code> option defaults to <code>true</code>. You never need to remember to enable it.</li>
+<li><strong>Cannot be bypassed accidentally</strong> - Dangerous tags are always removed, even with <code>sanitize: false</code>. That option only controls URL sanitization for trusted content scenarios.</li>
+<li><strong>Content preserved when safe</strong> - The library removes threats, not content. <code>&lt;b&gt;bold&lt;/b&gt;</code> stays as <code>&lt;b&gt;bold&lt;/b&gt;</code>, while <code>&lt;script&gt;code&lt;/script&gt;</code> becomes empty.</li>
+<li><strong>No allowlist required</strong> - Unlike some sanitizers, you don&#39;t need to specify which tags are safe. The library knows.</li>
+</ul>
+<h2>Examples</h2>
+<h3>User Comment with Script Injection</h3>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+const comment = markdown(`
+Great article!
+
+&lt;script&gt;document.cookie&lt;/script&gt;
+
+Really enjoyed it.
+`)
+
+// Output: &#39;&lt;p&gt;Great article!&lt;/p&gt;\n\n&lt;p&gt;Really enjoyed it.&lt;/p&gt;&#39;
+// Script tag completely removed
+</code></pre>
+<h3>Link with JavaScript URL</h3>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+const content = markdown(&#39;[Click me](javascript:alert(&quot;xss&quot;))&#39;)
+
+// Output: &#39;&lt;p&gt;Click me&lt;/p&gt;&#39;
+// Link removed because URL is dangerous, but text preserved
+</code></pre>
+<h3>Image with Error Handler</h3>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+const content = markdown(&#39;![alt](image.png&quot; onerror=&quot;steal())&#39;)
+
+// Output: &#39;&lt;p&gt;&lt;img src=&quot;image.png&quot; alt=&quot;alt&quot; /&gt;&lt;/p&gt;&#39;
+// Event handler stripped, safe attributes preserved
+</code></pre>
+<h2>Disabling for Trusted Content</h2>
+<p>If you&#39;re rendering your own content (not user input), you can disable URL sanitization:</p>
+<pre><code class="language-typescript">import { markdown } from &#39;@motioneffector/markdown&#39;
+
+// Only do this for content you control
+const trustedHtml = markdown(myOwnContent, { sanitize: false })
+</code></pre>
+<p>Even with <code>sanitize: false</code>, dangerous tags like <code>&lt;script&gt;</code> are still removed. This option only affects URL scheme validation.</p>
+<h2>Related</h2>
+<ul>
+<li><strong><a href="guide-handling-user-input.html">Handling User Input</a></strong> - Best practices for user-generated content</li>
+<li><strong><a href="api-parsing.html">Parsing API</a></strong> - Full documentation of the <code>sanitize</code> option</li>
+<li><strong><a href="api-stripping.html">Stripping API</a></strong> - Additional filtering for context-specific output</li>
+</ul>
+
+        </article>
+      </main>
+    </div>
+  </div>
+</body>
+</html>
