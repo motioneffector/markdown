@@ -1,4 +1,7 @@
-import { markdown, markdownStrip } from 'https://esm.sh/@motioneffector/markdown@latest'
+import * as Library from '../dist/index.js'
+window.Library = Library
+
+const { markdown, markdownStrip } = Library
 
 // ============================================
 // LIBRARY VERIFICATION
@@ -6,12 +9,9 @@ import { markdown, markdownStrip } from 'https://esm.sh/@motioneffector/markdown
 
 if (typeof markdown === 'undefined' || typeof markdownStrip === 'undefined') {
   throw new Error(
-    'Library not loaded. Run `pnpm build` first, then serve this directory.'
+    'Library not loaded. Run `npm run build` first, then serve this directory.'
   )
 }
-
-// Expose library to window for tests
-window.Library = { markdown, markdownStrip }
 
 // ============================================
 // EXAMPLE DATA
