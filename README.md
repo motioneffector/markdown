@@ -6,7 +6,6 @@ A lightweight, standards-compliant markdown parser for rendering user content sa
 [![license](https://img.shields.io/npm/l/@motioneffector/markdown.svg)](https://github.com/motioneffector/markdown/blob/main/LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 
-**[Try the interactive demo →](https://motioneffector.github.io/markdown/)**
 
 ## Features
 
