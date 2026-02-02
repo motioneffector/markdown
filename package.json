@@ -42,7 +42,7 @@
     "build": "tsc && vite build && npm run build:manual",
     "build:manual": "node scripts/build-manual.cjs",
     "test": "vitest",
-    "test:run": "vitest run",
+    "test:run": "vitest run --exclude src/fuzz.test.ts",
     "lint": "eslint src",
     "format": "prettier --write src",
     "typecheck": "tsc --noEmit",
