@@ -1,6 +1,6 @@
 {
   "name": "@motioneffector/markdown",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "CommonMark + GFM compliant markdown parser",
   "author": "motioneffector",
   "license": "MIT",
