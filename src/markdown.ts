@@ -1687,16 +1687,20 @@ function processInlineSinglePass(
 
       if (decMatch && decMatch[1]) {
         const code = parseInt(decMatch[1], 10)
-        parts.push(String.fromCharCode(code))
-        i += decMatch[0].length
-        continue
+        if (!isNaN(code)) {
+          parts.push(String.fromCharCode(code))
+          i += decMatch[0].length
+          continue
+        }
       }
 
       if (hexMatch && hexMatch[1]) {
         const code = parseInt(hexMatch[1], 16)
-        parts.push(String.fromCharCode(code))
-        i += hexMatch[0].length
-        continue
+        if (!isNaN(code)) {
+          parts.push(String.fromCharCode(code))
+          i += hexMatch[0].length
+          continue
+        }
       }
 
       // Not an entity, let it fall through to plain text handling
