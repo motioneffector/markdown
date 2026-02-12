@@ -1,4 +1,4 @@
-import { describe, it } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { markdown } from './markdown'
 import { markdownStrip } from './markdown-strip'
 import { ValidationError, ParseError, MarkdownError } from './errors'
@@ -202,14 +202,12 @@ describe('Fuzz: markdown() - Input Mutation', () => {
       const output = markdown(input)
 
       // Verify invariants
-      if (typeof output !== 'string') {
-        throw new Error(`Expected string output, got ${typeof output}`)
-      }
-
-      if (output === null || output === undefined) {
-        throw new Error(`Output should not be null/undefined`)
-      }
+      expect(typeof output).toBe('string')
+      expect(output).not.toBeNull()
+      expect(output).not.toBeUndefined()
     })
+
+    expect(result.iterations).toBeGreaterThan(0)
 
     if (THOROUGH_MODE) {
       console.log(`Completed ${result.iterations} iterations in ${result.durationMs}ms`)
@@ -434,12 +432,8 @@ describe('Fuzz: markdownStrip() - Configuration', () => {
         markdownStrip(html, { allow, strip })
         throw new Error('Should have thrown ValidationError')
       } catch (e) {
-        if (!(e instanceof ValidationError)) {
-          throw new Error(`Wrong error type: ${e?.constructor?.name}`)
-        }
-        if (e.message.length === 0) {
-          throw new Error('Error message is empty')
-        }
+        expect(e).toBeInstanceOf(ValidationError)
+        expect((e as ValidationError).message.length).toBeGreaterThan(0)
       }
     })
   })
@@ -482,18 +476,11 @@ describe('Fuzz: markdownStrip() - Configuration', () => {
         markdownStrip(html, { allow: ['p'], strip: ['div'] })
         throw new Error('Should have thrown ValidationError')
       } catch (e) {
-        if (!(e instanceof ValidationError)) {
-          throw new Error(`Wrong error type: ${e?.constructor?.name}`)
-        }
-
-        const msg = e.message.toLowerCase()
-        if (msg.includes('undefined') || msg.includes('[object object]')) {
-          throw new Error(`Error message contains poor formatting: ${e.message}`)
-        }
-
-        if (e.message.length < 10) {
-          throw new Error(`Error message too short: ${e.message}`)
-        }
+        expect(e).toBeInstanceOf(ValidationError)
+        const msg = (e as ValidationError).message
+        expect(msg.toLowerCase()).not.toContain('undefined')
+        expect(msg.toLowerCase()).not.toContain('[object object]')
+        expect(msg.length).toBeGreaterThanOrEqual(10)
       }
     })
   })
@@ -649,14 +636,11 @@ describe('Fuzz: Error Handling', () => {
         markdownStrip(html, { allow: ['p'], strip: ['div'] })
         // Should throw, but if it doesn't, that's ok for this test
       } catch (e) {
-        if (e instanceof ValidationError || e instanceof ParseError || e instanceof MarkdownError) {
-          // Expected error types
-        } else if (e instanceof Error && e.message.includes('Fuzz test failed')) {
-          // Re-throw fuzz test errors
+        if (e instanceof Error && e.message.includes('Fuzz test failed')) {
           throw e
-        } else {
-          throw new Error(`Unexpected error type: ${e?.constructor?.name}`)
         }
+        const isExpectedType = e instanceof ValidationError || e instanceof ParseError || e instanceof MarkdownError
+        expect(isExpectedType).toBe(true)
       }
     })
   })
@@ -668,15 +652,11 @@ describe('Fuzz: Error Handling', () => {
       try {
         markdownStrip(html, { allow: ['p'], strip: ['div'] })
       } catch (e) {
-        if (e instanceof MarkdownError) {
-          const msg = e.message
-          if (msg.includes('undefined') || msg.includes('[object Object]')) {
-            throw new Error(`Error message has poor formatting: ${msg}`)
-          }
-          if (msg.length === 0) {
-            throw new Error(`Error message is empty`)
-          }
-        }
+        expect(e).toBeInstanceOf(MarkdownError)
+        const msg = (e as MarkdownError).message
+        expect(msg).not.toContain('undefined')
+        expect(msg).not.toContain('[object Object]')
+        expect(msg.length).toBeGreaterThan(0)
       }
     })
   })

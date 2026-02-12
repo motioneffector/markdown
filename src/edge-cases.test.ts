@@ -6,15 +6,21 @@ describe('CommonMark Spec Compliance', () => {
     it('handles nested block quotes correctly', () => {
       const result = markdown('> Level 1\n>> Level 2\n>>> Level 3')
       expect(result).toContain('<blockquote>')
-      const matches = result.match(/<blockquote>/g)
+      const matches = result.match(/<blockquote>/g) as RegExpMatchArray
       expect(matches).toHaveLength(3)
+      expect(matches[0]).toBe('<blockquote>')
+      expect(matches[1]).toBe('<blockquote>')
+      expect(matches[2]).toBe('<blockquote>')
     })
 
     it('handles nested lists correctly', () => {
       const result = markdown('- Level 1\n  - Level 2\n    - Level 3')
       expect(result).toContain('<ul>')
-      const matches = result.match(/<ul>/g)
+      const matches = result.match(/<ul>/g) as RegExpMatchArray
       expect(matches).toHaveLength(3)
+      expect(matches[0]).toBe('<ul>')
+      expect(matches[1]).toBe('<ul>')
+      expect(matches[2]).toBe('<ul>')
     })
 
     it('handles emphasis algorithm edge cases', () => {
@@ -40,8 +46,11 @@ describe('CommonMark Spec Compliance', () => {
 
     it('handles thematic break edge cases', () => {
       const result = markdown('***\n---\n___')
-      const matches = result.match(/<hr/g)
+      const matches = result.match(/<hr/g) as RegExpMatchArray
       expect(matches).toHaveLength(3)
+      expect(matches[0]).toBe('<hr')
+      expect(matches[1]).toBe('<hr')
+      expect(matches[2]).toBe('<hr')
     })
   })
 })
@@ -128,23 +137,19 @@ describe('Edge Cases', () => {
   describe('Malformed Input', () => {
     it('handles unclosed tags gracefully', () => {
       const result = markdown('<div>unclosed', { sanitize: false })
-      expect(result).toBeDefined()
-      expect(typeof result).toBe('string')
       // Should wrap in paragraph and preserve the unclosed tag content
       expect(result).toContain('unclosed')
-      expect(result.length).toBeGreaterThan(0)
+      expect(result).toContain('<div>')
     })
 
     it('handles unmatched emphasis', () => {
       const result = markdown('*unclosed emphasis')
-      expect(result).toBeDefined()
       expect(result).toContain('<p>')
       expect(result).toContain('unclosed emphasis')
     })
 
     it('handles broken links', () => {
       const result = markdown('[text](')
-      expect(result).toBeDefined()
       expect(result).toContain('<p>')
       // Broken link should render as literal text, not as a link
       expect(result).toContain('[text](')
@@ -153,13 +158,12 @@ describe('Edge Cases', () => {
 
     it('handles broken tables', () => {
       const result = markdown('| A | B |\n| 1 |')
-      expect(result).toBeDefined()
-      expect(typeof result).toBe('string')
       // Broken table (missing delimiter row) should not render as table
       expect(result).not.toContain('<table>')
       // Should render as paragraph instead
       expect(result).toContain('<p>')
-      expect(result.length).toBeGreaterThan(0)
+      expect(result).toContain('A')
+      expect(result).toContain('B')
     })
   })
 
@@ -182,14 +186,12 @@ describe('Edge Cases', () => {
 
     it('handles combining characters', () => {
       const result = markdown('e\u0301') // é with combining acute
-      expect(result).toBeDefined()
       expect(result).toContain('<p>')
-      expect(result).toContain('\u0301')
+      expect(result).toContain('e\u0301')
     })
 
     it('handles zero-width characters', () => {
       const result = markdown('Hello\u200BWorld') // zero-width space
-      expect(result).toBeDefined()
       expect(result).toContain('<p>')
       expect(result).toContain('Hello')
       expect(result).toContain('World')

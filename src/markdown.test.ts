@@ -21,7 +21,7 @@ describe('markdown()', () => {
 
     it('returns string HTML output', () => {
       const result = markdown('Test')
-      expect(typeof result).toBe('string')
+      expect(result).toBe('<p>Test</p>')
     })
 
     it('handles empty string input', () => {
@@ -421,7 +421,7 @@ describe('Block Elements', () => {
 
       // Must complete in reasonable time (< 100ms)
       expect(elapsed).toBeLessThan(100)
-      expect(typeof result).toBe('string')
+      expect(result).toContain('<')
     })
 
     it('handles thematic break with many asterisks and spaces quickly', () => {
@@ -431,7 +431,7 @@ describe('Block Elements', () => {
       const elapsed = Date.now() - start
 
       expect(elapsed).toBeLessThan(100)
-      expect(typeof result).toBe('string')
+      expect(result).toContain('<')
     })
 
     it('handles thematic break with many underscores and spaces quickly', () => {
@@ -441,7 +441,7 @@ describe('Block Elements', () => {
       const elapsed = Date.now() - start
 
       expect(elapsed).toBeLessThan(100)
-      expect(typeof result).toBe('string')
+      expect(result).toContain('<')
     })
 
     it('handles pathological thematic break pattern quickly', () => {
@@ -452,7 +452,7 @@ describe('Block Elements', () => {
       const elapsed = Date.now() - start
 
       expect(elapsed).toBeLessThan(100)
-      expect(typeof result).toBe('string')
+      expect(result).toContain('<')
     })
 
     it('correctly identifies valid thematic breaks', () => {

@@ -11,9 +11,15 @@ interface SpecTest {
 }
 
 // Load the spec
-const specTests: SpecTest[] = JSON.parse(
-  fs.readFileSync('./commonmark-spec-0.31.2.json', 'utf-8')
-)
+let specTests: SpecTest[]
+try {
+  specTests = JSON.parse(
+    fs.readFileSync('./commonmark-spec-0.31.2.json', 'utf-8')
+  )
+} catch (err) {
+  console.error(`Failed to load spec file: ${err instanceof Error ? err.message : String(err)}`)
+  process.exit(1)
+}
 
 console.log(`\nCommonMark 0.31.2 Compliance Check`)
 console.log(`Total spec tests: ${specTests.length}\n`)
